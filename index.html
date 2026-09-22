@@ -1,0 +1,4900 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>左屏学习计时器</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101416;
+      --panel: #171d20;
+      --panel-2: #1e2529;
+      --text: #edf3f1;
+      --muted: #99a8a5;
+      --line: #2e393d;
+      --accent: #62d69d;
+      --accent-2: #f4c15d;
+      --vocabulary: #75bfff;
+      --vocabulary-deep: #18344a;
+      --distraction: #ff9d73;
+      --danger: #ff7a7a;
+      --shadow: 0 18px 44px rgba(0, 0, 0, 0.26);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      overscroll-behavior-x: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      letter-spacing: 0;
+      overscroll-behavior-x: none;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1180px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(170px, 0.7fr) minmax(260px, 1.6fr) minmax(160px, 0.7fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .subject-panel {
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px 16px;
+      align-items: center;
+    }
+
+    .subject-panel-title {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 680;
+      white-space: nowrap;
+    }
+
+    .subject-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .subject-item {
+      min-height: 54px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121719;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .subject-item-name {
+      color: var(--accent);
+      font-size: 0.86rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .subject-item-time {
+      color: var(--text);
+      font-size: 1.18rem;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .subject-item.uncategorized .subject-item-name,
+    .subject-item.uncategorized .subject-item-time {
+      color: var(--muted);
+    }
+
+    .time-box,
+    .state-box {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 104px;
+    }
+
+    .date {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.3;
+    }
+
+    .clock {
+      margin-top: 6px;
+      font-size: 2.15rem;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+    }
+
+    .task-box {
+      padding: 14px;
+      min-height: 104px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .task-main {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .task-input {
+      width: 100%;
+      min-height: 52px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 1.35rem;
+      outline: none;
+    }
+
+    .task-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(98, 214, 157, 0.16);
+    }
+
+    .task-input:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .task-options {
+      display: grid;
+      grid-template-columns: minmax(210px, auto) minmax(120px, 0.65fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .segment {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+    }
+
+    .segment-btn {
+      min-height: 40px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.98rem;
+      font-weight: 720;
+    }
+
+    .segment-btn.active {
+      background: var(--accent);
+      color: #08110d;
+    }
+
+    .segment-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .segment-subject {
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .meal-select,
+    .date-input {
+      min-height: 52px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .meal-select:focus,
+    .date-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(98, 214, 157, 0.16);
+    }
+
+    .state-title {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .state-value {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .guardian-sync-status {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.25;
+    }
+
+    .guardian-sync-status[data-status="connected"] {
+      color: var(--accent);
+    }
+
+    .guardian-sync-status[data-status="retrying"],
+    .guardian-sync-status[data-status="interrupted"],
+    .guardian-sync-status[data-status="conflict"] {
+      color: var(--accent-2);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex: 0 0 auto;
+    }
+
+    .dot.running {
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(98, 214, 157, 0.12);
+    }
+
+    .dot.vocabulary {
+      background: var(--vocabulary);
+      box-shadow: 0 0 0 6px rgba(117, 191, 255, 0.14);
+    }
+
+    .hero {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      min-height: 236px;
+    }
+
+    .timer-setup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .timer-mode-segment {
+      width: min(320px, 100%);
+      flex: 0 1 320px;
+    }
+
+    .countdown-duration {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+    }
+
+    .countdown-duration[hidden] {
+      display: none;
+    }
+
+    .countdown-duration-input {
+      width: 86px;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #151b1e;
+      color: var(--text);
+      padding: 0 10px;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .countdown-duration-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(98, 214, 157, 0.16);
+    }
+
+    .countdown-duration-input:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .countdown-unit {
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .timer-meta {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .active-task {
+      color: var(--text);
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.35;
+      min-height: 38px;
+      overflow-wrap: anywhere;
+    }
+
+    .active-edit-actions {
+      min-height: 34px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .active-edit-actions[hidden],
+    .active-edit-actions .small-btn[hidden] {
+      display: none;
+    }
+
+    .timer {
+      margin-top: 14px;
+      font-size: clamp(4.2rem, 8rem, 8rem);
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+      line-height: 0.95;
+    }
+
+    .timer.countdown-warning {
+      color: var(--accent-2);
+    }
+
+    .timer.vocabulary-active {
+      color: var(--vocabulary);
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+      width: 220px;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 62px;
+      padding: 0 18px;
+      cursor: pointer;
+      color: var(--text);
+      background: var(--panel-2);
+      font-weight: 760;
+      font-size: 1.15rem;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: #526266;
+      background: #263036;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #08110d;
+      border-color: var(--accent);
+    }
+
+    .btn.pause {
+      background: var(--accent-2);
+      color: #151006;
+      border-color: var(--accent-2);
+    }
+
+    .btn.distraction {
+      background: #31241f;
+      color: #ffd8c8;
+      border-color: #6b493c;
+    }
+
+    .btn.distraction:hover:not(:disabled) {
+      background: #412d25;
+      border-color: var(--distraction);
+    }
+
+    .btn.distraction.recorded {
+      animation: distraction-recorded 520ms ease-out;
+    }
+
+    .btn.vocabulary {
+      background: var(--vocabulary-deep);
+      color: #d9efff;
+      border-color: #32688f;
+    }
+
+    .btn.vocabulary:hover:not(:disabled) {
+      background: #204762;
+      border-color: var(--vocabulary);
+    }
+
+    .btn.vocabulary.returning {
+      background: var(--vocabulary);
+      color: #06131c;
+      border-color: var(--vocabulary);
+    }
+
+    @keyframes distraction-recorded {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 157, 115, 0.52);
+      }
+      100% {
+        box-shadow: 0 0 0 12px rgba(255, 157, 115, 0);
+      }
+    }
+
+    .btn.copy {
+      min-height: 48px;
+      font-size: 1rem;
+    }
+
+    .btn.end {
+      background: #3a2a2d;
+      color: #ffd4d4;
+      border-color: #664148;
+    }
+
+    .pause-reasons {
+      grid-column: 1 / -1;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .pause-reasons[hidden] {
+      display: none;
+    }
+
+    .reason-title {
+      color: var(--muted);
+      font-size: 0.98rem;
+      margin-bottom: 10px;
+    }
+
+    .reason-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .reason-btn {
+      min-height: 58px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #20282c;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 720;
+      line-height: 1.25;
+    }
+
+    .reason-btn:hover {
+      border-color: var(--accent-2);
+      background: #293238;
+    }
+
+    .custom-reason {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .custom-reason-input {
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+      color: var(--text);
+      padding: 0 14px;
+      outline: none;
+      font-size: 1rem;
+    }
+
+    .custom-reason-input:focus {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 3px rgba(244, 193, 93, 0.15);
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .small-btn {
+      min-height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #20282c;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .small-btn:hover {
+      border-color: #526266;
+      background: #293238;
+    }
+
+    .small-btn.delete {
+      color: #ffd4d4;
+      border-color: #664148;
+    }
+
+    .records {
+      padding: 16px;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .records-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .records-title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .record-tools {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .date-control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .record-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .record-group + .record-group {
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .record-group-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text);
+      font-weight: 760;
+    }
+
+    .record-group-title span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 600;
+    }
+
+    .meal-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .meal-item {
+      min-height: 64px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121719;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .meal-label {
+      color: var(--accent-2);
+      font-size: 0.9rem;
+      font-weight: 760;
+    }
+
+    .meal-time {
+      color: var(--text);
+      font-size: 1rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      line-height: 1.25;
+    }
+
+    .total {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      overscroll-behavior-x: contain;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1120px;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      background: #121719;
+      font-size: 0.92rem;
+      font-weight: 650;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .table-wrap th:last-child,
+    .table-wrap td:last-child {
+      position: sticky;
+      right: 0;
+      min-width: 140px;
+      padding-left: 12px;
+      padding-right: 12px;
+      box-shadow: inset 1px 0 0 var(--line), -12px 0 16px rgba(0, 0, 0, 0.24);
+    }
+
+    .table-wrap tbody td:last-child {
+      z-index: 2;
+      background: var(--panel);
+    }
+
+    .table-wrap thead th:last-child {
+      z-index: 3;
+    }
+
+    .table-wrap th:last-child .row-actions,
+    .table-wrap td:last-child .row-actions {
+      flex-wrap: nowrap;
+    }
+
+    .vocabulary-cell {
+      color: #cbe9ff;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .task-cell {
+      overflow-wrap: anywhere;
+      min-width: 240px;
+    }
+
+    .reason-cell {
+      overflow-wrap: anywhere;
+      min-width: 210px;
+      color: var(--muted);
+    }
+
+    .distraction-cell {
+      overflow-wrap: anywhere;
+      min-width: 230px;
+      color: #ffd8c8;
+    }
+
+    .output-cell {
+      overflow-wrap: anywhere;
+      min-width: 280px;
+      color: var(--text);
+    }
+
+    .evaluation-cell {
+      min-width: 126px;
+      color: var(--accent);
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    .study-table {
+      min-width: 1640px;
+    }
+
+    .study-table th:nth-child(2),
+    .study-table td:nth-child(2) {
+      white-space: nowrap;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.62);
+    }
+
+    .modal[hidden] {
+      display: none;
+    }
+
+    .modal-card {
+      width: min(680px, 100%);
+      max-height: min(760px, 92vh);
+      overflow: auto;
+      padding: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-card.compact {
+      width: min(460px, 100%);
+    }
+
+    .review-context {
+      display: grid;
+      gap: 5px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121719;
+    }
+
+    .review-task {
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 740;
+      overflow-wrap: anywhere;
+    }
+
+    .review-meta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .review-form {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .evaluation-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .evaluation-btn {
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #20282c;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .evaluation-btn:hover {
+      border-color: #526266;
+      color: var(--text);
+    }
+
+    .evaluation-btn.active {
+      border-color: var(--accent);
+      background: rgba(98, 214, 157, 0.14);
+      color: var(--accent);
+    }
+
+    .evaluation-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .review-error {
+      min-height: 20px;
+      color: var(--danger);
+      font-size: 0.92rem;
+    }
+
+    .active-edit-field {
+      margin-top: 14px;
+    }
+
+    .active-edit-error {
+      min-height: 20px;
+      margin-top: 8px;
+      color: var(--danger);
+      font-size: 0.92rem;
+    }
+
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1113;
+      color: var(--text);
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 116px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 28px 14px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #121719;
+    }
+
+    .toast {
+      min-height: 22px;
+      color: var(--accent);
+      font-size: 0.94rem;
+    }
+
+    .toast.error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 820px) {
+      .app {
+        padding: 14px;
+      }
+
+      .topbar,
+      .hero,
+      .subject-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .subject-list {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        width: 100%;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .reason-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .timer {
+        font-size: 4.7rem;
+      }
+
+      .records-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .record-tools {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .task-options,
+      .meal-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .reason-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .custom-reason {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .evaluation-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .timer {
+        font-size: 3.7rem;
+      }
+
+      .timer-setup,
+      .countdown-duration {
+        align-items: stretch;
+        width: 100%;
+      }
+
+      .timer-setup {
+        flex-direction: column;
+      }
+
+      .timer-mode-segment {
+        width: 100%;
+        flex: none;
+      }
+
+      .countdown-duration {
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .task-input {
+        font-size: 1.12rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn.distraction.recorded {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="topbar" aria-label="顶部信息">
+      <div class="box time-box">
+        <div id="todayDate" class="date">--</div>
+        <div id="liveClock" class="clock">--:--:--</div>
+      </div>
+
+      <div class="box task-box">
+        <label class="task-main" for="taskInput">
+          <span class="label">当前任务 / 事项</span>
+          <input id="taskInput" class="task-input" type="text" autocomplete="off" placeholder="例如：英语阅读 Text 2 精读 / 晚饭">
+        </label>
+        <div class="task-options">
+          <div class="segment" aria-label="记录类型">
+            <button id="studyKindBtn" class="segment-btn active" type="button" data-kind="study">学习</button>
+            <button id="mealKindBtn" class="segment-btn" type="button" data-kind="meal">吃饭</button>
+          </div>
+          <select id="mealSlotInput" class="meal-select" aria-label="餐次">
+            <option value="breakfast">早饭</option>
+            <option value="lunch">午饭</option>
+            <option value="dinner">晚饭</option>
+          </select>
+          <div class="segment segment-subject" aria-label="科目">
+            <button class="segment-btn" type="button" data-subject="408">408</button>
+            <button class="segment-btn" type="button" data-subject="math">数学</button>
+            <button class="segment-btn" type="button" data-subject="english">英语</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="box state-box">
+        <div class="state-title">当前状态</div>
+        <div class="state-value">
+          <span id="stateDot" class="dot" aria-hidden="true"></span>
+          <span id="stateText">未开始</span>
+        </div>
+        <div id="guardianSyncStatus" class="guardian-sync-status" data-status="retrying" aria-live="polite">自动重连中</div>
+        <div class="guardian-sync-status" aria-live="polite">
+          <span id="remoteControlStatus">遥控未启用</span>
+          <button id="remoteControlPairBtn" class="small-btn" type="button">连接遥控</button>
+          <button id="remoteControlStopBtn" class="small-btn" type="button" hidden>停用遥控</button>
+          <span id="remoteControlPair" hidden>
+            <input id="remoteControlToken" type="password" autocomplete="off" aria-label="本机遥控配对密钥" placeholder="本机配对密钥" style="width:180px">
+            <button id="remoteControlConnectBtn" class="small-btn" type="button">连接</button>
+            <button id="remoteControlCancelBtn" class="small-btn" type="button">取消</button>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section class="box subject-panel" aria-label="三科学习时间">
+      <div id="subjectPanelTitle" class="subject-panel-title">三科时间</div>
+      <div id="subjectSummary" class="subject-list"></div>
+    </section>
+
+    <section class="box hero" aria-label="计时器">
+      <div>
+        <div class="timer-setup" aria-label="计时设置">
+          <div class="segment timer-mode-segment" aria-label="计时方式">
+            <button id="countUpModeBtn" class="segment-btn active" type="button">正向计时</button>
+            <button id="countDownModeBtn" class="segment-btn" type="button">倒计时</button>
+          </div>
+          <label id="countdownDurationField" class="countdown-duration" for="countdownMinutesInput" hidden>
+            <span class="label">倒计时</span>
+            <input id="countdownMinutesInput" class="countdown-duration-input" type="number" min="1" max="1440" step="1" inputmode="numeric" value="60" aria-label="倒计时分钟">
+            <span class="countdown-unit">分钟</span>
+          </label>
+        </div>
+        <div id="timerMeta" class="timer-meta">等待开始</div>
+        <div id="activeTask" class="active-task">未标注任务</div>
+        <div id="activeEditActions" class="active-edit-actions" hidden>
+          <button id="editActiveTaskBtn" class="small-btn" type="button">修改学习标题</button>
+          <button id="editPauseReasonBtn" class="small-btn" type="button" hidden>修改暂停原因</button>
+          <button id="deferMaintenanceBtn" class="small-btn" type="button" hidden>稍后维护</button>
+        </div>
+        <div id="timerDisplay" class="timer">00:00:00</div>
+      </div>
+      <div class="controls">
+        <button id="startBtn" class="btn primary" type="button">开始</button>
+        <button id="pauseBtn" class="btn" type="button" disabled>暂停</button>
+        <button id="vocabularyBtn" class="btn vocabulary" type="button" title="暂停原学习块并开始记录背单词时间" hidden>去背单词</button>
+        <button id="distractionBtn" class="btn distraction" type="button" title="点击或按右侧 Option 记录此刻分心，学习计时继续" disabled>分心</button>
+        <button id="endBtn" class="btn end" type="button" disabled>结束本段</button>
+      </div>
+      <div id="pauseReasonPanel" class="pause-reasons" hidden>
+        <div class="reason-title">为什么暂停？</div>
+        <div class="reason-grid" aria-label="暂停原因">
+          <button class="reason-btn" type="button" data-reason="上厕所">上厕所</button>
+          <button class="reason-btn" type="button" data-reason="装水">装水</button>
+          <button class="reason-btn" type="button" data-reason="打飞机">打飞机</button>
+          <button class="reason-btn" type="button" data-reason="看 Twitter 休息">看 Twitter 休息</button>
+          <button class="reason-btn" type="button" data-reason="看 B 站休息">看 B 站休息</button>
+          <button class="reason-btn" type="button" data-reason="看微信休息">看微信休息</button>
+          <button class="reason-btn" type="button" data-reason="看微信视频号休息">看微信视频号休息</button>
+          <button class="reason-btn" type="button" data-reason="跟家人聊天休息">跟家人聊天休息</button>
+          <button class="reason-btn" type="button" data-reason="处理杂七杂八的事情休息">处理杂七杂八的事情休息</button>
+          <button class="reason-btn" type="button" data-reason="发呆休息">发呆休息</button>
+        </div>
+        <div class="custom-reason">
+          <input id="customPauseReasonInput" class="custom-reason-input" type="text" autocomplete="off" placeholder="自己填写暂停原因">
+          <button id="customPauseReasonBtn" class="reason-btn" type="button">使用这个原因</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="box records" aria-label="日期记录">
+      <div class="records-head">
+        <div class="records-title">
+          <h1 id="recordsTitle">今日记录</h1>
+          <div id="todayTotal" class="total">合计 00:00:00</div>
+        </div>
+        <div class="record-tools">
+          <label class="date-control" for="viewDateInput">
+            <span class="label">查看日期</span>
+            <input id="viewDateInput" class="date-input" type="date">
+          </label>
+          <button id="prevDateBtn" class="small-btn" type="button">前一天</button>
+          <button id="todayBtn" class="small-btn" type="button">今天</button>
+          <button id="nextDateBtn" class="small-btn" type="button">后一天</button>
+          <button id="copyBtn" class="btn copy" type="button">复制本日 Markdown</button>
+          <button id="copyJsonBtn" class="btn copy" type="button">复制本日 JSON</button>
+          <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        </div>
+      </div>
+      <div id="recordsContainer"></div>
+    </section>
+
+    <section id="activeEditModal" class="modal" hidden aria-label="修改当前计时内容">
+      <div class="modal-card compact">
+        <h2 id="activeEditTitle">修改学习标题</h2>
+        <label class="field active-edit-field" for="activeEditInput">
+          <span id="activeEditLabel" class="label">学习标题</span>
+          <input id="activeEditInput" type="text" autocomplete="off">
+        </label>
+        <div id="activeEditError" class="active-edit-error" role="alert"></div>
+        <div class="modal-actions">
+          <button id="activeEditCancel" class="btn copy" type="button">取消</button>
+          <button id="activeEditSave" class="btn primary copy" type="button">保存修改</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="blockReviewModal" class="modal" hidden aria-label="本段学习复盘">
+      <div class="modal-card compact">
+        <h2>本段学习复盘</h2>
+        <div class="review-context">
+          <div id="blockReviewTask" class="review-task">未标注任务</div>
+          <div id="blockReviewMeta" class="review-meta">--</div>
+        </div>
+        <div class="review-form">
+          <label class="field" for="blockReviewOutput">
+            <span class="label">实际产出（一句话）</span>
+            <input id="blockReviewOutput" type="text" maxlength="180" autocomplete="off" placeholder="例如：完成本章 20 道题并整理 3 个错因">
+          </label>
+          <div class="field">
+            <span class="label">执行评价</span>
+            <div id="blockReviewEvaluation" class="evaluation-grid" role="radiogroup" aria-label="执行评价">
+              <button class="evaluation-btn" type="button" role="radio" aria-checked="false" data-evaluation="below_expectations">未达预期</button>
+              <button class="evaluation-btn" type="button" role="radio" aria-checked="false" data-evaluation="mostly_completed">基本完成</button>
+              <button class="evaluation-btn" type="button" role="radio" aria-checked="false" data-evaluation="completed_well">完成良好</button>
+              <button class="evaluation-btn" type="button" role="radio" aria-checked="false" data-evaluation="exceeded_expectations">超出预期</button>
+            </div>
+          </div>
+        </div>
+        <div id="blockReviewError" class="review-error" role="alert"></div>
+        <div class="modal-actions">
+          <button id="blockReviewSave" class="btn primary copy" type="button">保存本段记录</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="maintenanceModal" class="modal" hidden aria-label="记录稍后维护事项">
+      <div class="modal-card compact">
+        <h2>稍后维护</h2>
+        <div class="review-context">
+          <div id="maintenanceTask" class="review-task">未标注任务</div>
+          <div class="review-meta">只记录，不自动维修</div>
+        </div>
+        <div class="review-form">
+          <label class="field" for="maintenanceTitleInput">
+            <span class="label">维护事项</span>
+            <input id="maintenanceTitleInput" type="text" maxlength="120" autocomplete="off" placeholder="例如：看板没有刷新">
+          </label>
+          <label class="field" for="maintenanceNoteInput">
+            <span class="label">现象（选填一句）</span>
+            <input id="maintenanceNoteInput" type="text" maxlength="240" autocomplete="off" placeholder="只写看到的现象，不在学习中排查">
+          </label>
+        </div>
+        <div id="maintenanceError" class="review-error" role="alert"></div>
+        <div class="modal-actions">
+          <button id="maintenanceCancel" class="btn copy" type="button">取消</button>
+          <button id="maintenanceSave" class="btn primary copy" type="button">记到稍后</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="editModal" class="modal" hidden aria-label="编辑记录">
+      <div class="modal-card">
+        <h2>编辑记录</h2>
+        <div class="modal-grid">
+          <label class="field full">
+            <span class="label">任务 / 备注</span>
+            <input id="editTask" type="text" autocomplete="off">
+          </label>
+          <label class="field">
+            <span class="label">类型</span>
+            <select id="editKind">
+              <option value="study">学习</option>
+              <option value="meal">吃饭</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">餐次</span>
+            <select id="editMealSlot">
+              <option value="breakfast">早饭</option>
+              <option value="lunch">午饭</option>
+              <option value="dinner">晚饭</option>
+            </select>
+          </label>
+          <label id="editSubjectField" class="field">
+            <span class="label">科目</span>
+            <select id="editSubject">
+              <option value="">未分类</option>
+              <option value="408">408</option>
+              <option value="math">数学</option>
+              <option value="english">英语</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">开始时间</span>
+            <input id="editStart" type="time">
+          </label>
+          <label class="field">
+            <span class="label">结束时间</span>
+            <input id="editEnd" type="time">
+          </label>
+          <label class="field full">
+            <span class="label">暂停明细，每行格式：21:20-21:25 装水</span>
+            <textarea id="editPauses" spellcheck="false"></textarea>
+          </label>
+          <label id="editVocabularyField" class="field full">
+            <span class="label">背词插曲，每行格式：21:20-21:35</span>
+            <textarea id="editVocabulary" spellcheck="false"></textarea>
+          </label>
+          <label id="editOutputField" class="field full">
+            <span class="label">实际产出（一句话）</span>
+            <input id="editOutput" type="text" maxlength="180" autocomplete="off">
+          </label>
+          <label id="editEvaluationField" class="field full">
+            <span class="label">执行评价</span>
+            <select id="editEvaluation">
+              <option value="">未填写</option>
+              <option value="below_expectations">未达预期</option>
+              <option value="mostly_completed">基本完成</option>
+              <option value="completed_well">完成良好</option>
+              <option value="exceeded_expectations">超出预期</option>
+            </select>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button id="editCancel" class="btn copy" type="button">取消</button>
+          <button id="editSave" class="btn primary copy" type="button">保存修改</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="timer-control.js"></script>
+  <script>
+    (function () {
+      const STORAGE_KEY = "left-screen-study-timer:v3";
+      const MAINTENANCE_INBOX_KEY = "left-screen-study-timer:maintenance-inbox:v1";
+      const LEGACY_STORAGE_KEYS = ["left-screen-study-timer:v2", "left-screen-study-timer:v1"];
+      const GLOBAL_SHORTCUT_CURSOR_KEY = "left-screen-study-timer:global-shortcut-cursor:v1";
+      const GLOBAL_SHORTCUT_SIGNAL_FILE = "global-shortcut-events.js";
+      const WRITER_LEASE_KEY = "left-screen-study-timer:writer-lease:v1";
+      const WRITER_LEASE_TTL_MS = 9000;
+      const WRITER_LEASE_RENEW_MS = 3000;
+      const GLOBAL_SHORTCUT_LOAD_TIMEOUT_MS = 3000;
+      const GUARDIAN_CLIENT_KEY = "left-screen-study-timer:guardian-client:v1";
+      const GUARDIAN_SYNC_KEY = "left-screen-study-timer:guardian-sync:v1";
+      const GUARDIAN_TIMER_TOKEN = localStorage.getItem("study-timer:guardian-token") || "";
+      const GUARDIAN_TIMER_ENDPOINT = `http://127.0.0.1:8766/v1/timer?token=${encodeURIComponent(GUARDIAN_TIMER_TOKEN)}`;
+      const GUARDIAN_HEARTBEAT_MS = 30000;
+      const GUARDIAN_REQUEST_TIMEOUT_MS = 5000;
+      const GUARDIAN_RETRY_DELAYS_MS = [1000, 2000, 5000, 10000, 30000];
+      const GUARDIAN_WATCHDOG_MS = 45000;
+      const GUARDIAN_SUSTAINED_FAILURE_MS = 90000;
+      const GUARDIAN_SIGNAL_TYPES = new Set([
+        "pause_started",
+        "pause_reason_selected",
+        "pause_resumed",
+        "distraction_recorded"
+      ]);
+      const taskInput = document.getElementById("taskInput");
+      const studyKindBtn = document.getElementById("studyKindBtn");
+      const mealKindBtn = document.getElementById("mealKindBtn");
+      const mealSlotInput = document.getElementById("mealSlotInput");
+      const subjectButtons = Array.from(document.querySelectorAll("[data-subject]"));
+      const todayDate = document.getElementById("todayDate");
+      const liveClock = document.getElementById("liveClock");
+      const stateDot = document.getElementById("stateDot");
+      const stateText = document.getElementById("stateText");
+      const guardianSyncStatus = document.getElementById("guardianSyncStatus");
+      const timerMeta = document.getElementById("timerMeta");
+      const activeTask = document.getElementById("activeTask");
+      const activeEditActions = document.getElementById("activeEditActions");
+      const editActiveTaskBtn = document.getElementById("editActiveTaskBtn");
+      const editPauseReasonBtn = document.getElementById("editPauseReasonBtn");
+      const deferMaintenanceBtn = document.getElementById("deferMaintenanceBtn");
+      const timerDisplay = document.getElementById("timerDisplay");
+      const countUpModeBtn = document.getElementById("countUpModeBtn");
+      const countDownModeBtn = document.getElementById("countDownModeBtn");
+      const countdownDurationField = document.getElementById("countdownDurationField");
+      const countdownMinutesInput = document.getElementById("countdownMinutesInput");
+      const startBtn = document.getElementById("startBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const vocabularyBtn = document.getElementById("vocabularyBtn");
+      const distractionBtn = document.getElementById("distractionBtn");
+      const endBtn = document.getElementById("endBtn");
+      const pauseReasonPanel = document.getElementById("pauseReasonPanel");
+      const customPauseReasonInput = document.getElementById("customPauseReasonInput");
+      const customPauseReasonBtn = document.getElementById("customPauseReasonBtn");
+      const copyBtn = document.getElementById("copyBtn");
+      const copyJsonBtn = document.getElementById("copyJsonBtn");
+      const toast = document.getElementById("toast");
+      const recordsContainer = document.getElementById("recordsContainer");
+      const todayTotal = document.getElementById("todayTotal");
+      const subjectPanelTitle = document.getElementById("subjectPanelTitle");
+      const subjectSummary = document.getElementById("subjectSummary");
+      const recordsTitle = document.getElementById("recordsTitle");
+      const viewDateInput = document.getElementById("viewDateInput");
+      const prevDateBtn = document.getElementById("prevDateBtn");
+      const todayBtn = document.getElementById("todayBtn");
+      const nextDateBtn = document.getElementById("nextDateBtn");
+      const activeEditModal = document.getElementById("activeEditModal");
+      const activeEditTitle = document.getElementById("activeEditTitle");
+      const activeEditLabel = document.getElementById("activeEditLabel");
+      const activeEditInput = document.getElementById("activeEditInput");
+      const activeEditError = document.getElementById("activeEditError");
+      const activeEditCancel = document.getElementById("activeEditCancel");
+      const activeEditSave = document.getElementById("activeEditSave");
+      const blockReviewModal = document.getElementById("blockReviewModal");
+      const blockReviewTask = document.getElementById("blockReviewTask");
+      const blockReviewMeta = document.getElementById("blockReviewMeta");
+      const blockReviewOutput = document.getElementById("blockReviewOutput");
+      const blockReviewEvaluation = document.getElementById("blockReviewEvaluation");
+      const blockReviewError = document.getElementById("blockReviewError");
+      const blockReviewSave = document.getElementById("blockReviewSave");
+      const maintenanceModal = document.getElementById("maintenanceModal");
+      const maintenanceTask = document.getElementById("maintenanceTask");
+      const maintenanceTitleInput = document.getElementById("maintenanceTitleInput");
+      const maintenanceNoteInput = document.getElementById("maintenanceNoteInput");
+      const maintenanceError = document.getElementById("maintenanceError");
+      const maintenanceCancel = document.getElementById("maintenanceCancel");
+      const maintenanceSave = document.getElementById("maintenanceSave");
+      const editModal = document.getElementById("editModal");
+      const editTask = document.getElementById("editTask");
+      const editKind = document.getElementById("editKind");
+      const editMealSlot = document.getElementById("editMealSlot");
+      const editSubjectField = document.getElementById("editSubjectField");
+      const editSubject = document.getElementById("editSubject");
+      const editStart = document.getElementById("editStart");
+      const editEnd = document.getElementById("editEnd");
+      const editPauses = document.getElementById("editPauses");
+      const editVocabularyField = document.getElementById("editVocabularyField");
+      const editVocabulary = document.getElementById("editVocabulary");
+      const editOutputField = document.getElementById("editOutputField");
+      const editOutput = document.getElementById("editOutput");
+      const editEvaluationField = document.getElementById("editEvaluationField");
+      const editEvaluation = document.getElementById("editEvaluation");
+      const editCancel = document.getElementById("editCancel");
+      const editSave = document.getElementById("editSave");
+
+      const pad = (value) => String(value).padStart(2, "0");
+      const now = () => new Date();
+      const KIND_LABELS = { study: "学习", meal: "吃饭" };
+      const MEAL_SLOT_LABELS = { breakfast: "早饭", lunch: "午饭", dinner: "晚饭" };
+      const MEAL_SLOTS = ["breakfast", "lunch", "dinner"];
+      const SUBJECTS = ["408", "math", "english"];
+      const SUBJECT_LABELS = { "408": "408", math: "数学", english: "英语" };
+      const SELF_EVALUATION_LABELS = {
+        below_expectations: "未达预期",
+        mostly_completed: "基本完成",
+        completed_well: "完成良好",
+        exceeded_expectations: "超出预期"
+      };
+      const DEFAULT_COUNTDOWN_MINUTES = 60;
+      const MAX_COUNTDOWN_MINUTES = 1440;
+      const MAX_ACTUAL_OUTPUT_LENGTH = 180;
+      const MAX_MAINTENANCE_TITLE_LENGTH = 120;
+      const MAX_MAINTENANCE_NOTE_LENGTH = 240;
+      const guardianClientId = (() => {
+        const existing = localStorage.getItem(GUARDIAN_CLIENT_KEY);
+        if (existing) {
+          return existing;
+        }
+        const created = typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `timer-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem(GUARDIAN_CLIENT_KEY, created);
+        return created;
+      })();
+      const createGuardianBlockId = () => typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const createGuardianEventId = () => typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const writerTabId = typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `tab-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      let timerWriteActive = false;
+      let timerWriteDirty = false;
+      let timerWriteSemantic = false;
+      let timerWriteCursorDirty = false;
+      let controlTransport = null;
+      const TIMER_WRITE_LOCK = "left-screen-study-timer:state-write:v1";
+      const CONTROL_TOKEN_KEY = "left-screen-study-timer:control-token:v1";
+      let state = loadState();
+      let maintenanceInbox = loadMaintenanceInbox();
+      let guardianHeartbeatSeq = Math.max(Date.now(), Number(state.guardianRevision || 0));
+      let guardianSync = loadGuardianSync();
+      let tickId = null;
+      let editingId = null;
+      let activeEditMode = null;
+      let reviewingEntryId = null;
+      let selectedSelfEvaluation = "";
+      let rightOptionDown = false;
+      let globalShortcutPollId = null;
+      let globalShortcutLoadInFlight = false;
+      let globalShortcutLoadTimeoutId = null;
+      let globalShortcutScript = null;
+      let globalShortcutSessionId = "";
+      let globalShortcutLastEventId = 0;
+      let writerLeaseOwned = false;
+      let writerLeaseIntervalId = null;
+      let alarmAudioContext = null;
+      let countdownCompletionDisplayUntil = 0;
+      let guardianMirrorTimeoutId = null;
+      let guardianMirrorInFlight = false;
+      let guardianMirrorPending = false;
+      let guardianRetryIndex = 0;
+      let guardianFailureToastShown = false;
+      let guardianPageHideSent = false;
+      const guardianPageStartedAt = Date.now();
+
+      function dateKey(date) {
+        return [
+          date.getFullYear(),
+          pad(date.getMonth() + 1),
+          pad(date.getDate())
+        ].join("-");
+      }
+
+      function parseDateKey(key) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key || ""));
+        if (!match) {
+          return now();
+        }
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 0, 0, 0, 0);
+      }
+
+      function addDays(key, offset) {
+        const date = parseDateKey(key);
+        date.setDate(date.getDate() + offset);
+        return dateKey(date);
+      }
+
+      function displayDateText(key) {
+        return parseDateKey(key).toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long"
+        });
+      }
+
+      function timeText(date) {
+        return [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join(":");
+      }
+
+      function shortTimeText(date) {
+        return [pad(date.getHours()), pad(date.getMinutes())].join(":");
+      }
+
+      function monthDayTimeText(date) {
+        return [pad(date.getMonth() + 1), "-", pad(date.getDate()), " ", shortTimeText(date)].join("");
+      }
+
+      function timeRangeText(entry) {
+        const start = new Date(entry.startIso);
+        const end = new Date(entry.endIso);
+        if (dateKey(start) === dateKey(end)) {
+          return shortTimeText(start) + "-" + shortTimeText(end);
+        }
+        return monthDayTimeText(start) + "-" + monthDayTimeText(end);
+      }
+
+      function formatDuration(ms) {
+        const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return [hours, minutes, seconds].map(pad).join(":");
+      }
+
+      function formatCountdownDuration(ms) {
+        const roundedMs = Math.ceil(Math.max(0, ms) / 1000) * 1000;
+        return formatDuration(roundedMs);
+      }
+
+      function getAlarmAudioContext() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          return null;
+        }
+        if (!alarmAudioContext) {
+          alarmAudioContext = new AudioContextClass();
+        }
+        return alarmAudioContext;
+      }
+
+      function armCountdownAlarm() {
+        const context = getAlarmAudioContext();
+        if (!context) {
+          return false;
+        }
+        const resume = context.state === "suspended" ? context.resume() : Promise.resolve();
+        resume.then(() => {
+          const oscillator = context.createOscillator();
+          const gain = context.createGain();
+          gain.gain.setValueAtTime(0.0001, context.currentTime);
+          oscillator.connect(gain).connect(context.destination);
+          oscillator.start();
+          oscillator.stop(context.currentTime + 0.02);
+        }).catch(() => {});
+        return true;
+      }
+
+      function playCountdownAlarm() {
+        const context = getAlarmAudioContext();
+        if (!context) {
+          setToast("倒计时结束，但当前浏览器不支持声音提醒", true);
+          return;
+        }
+
+        const play = () => {
+          const startAt = context.currentTime + 0.03;
+          [0, 0.38, 0.76, 1.14].forEach((offset, index) => {
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            const toneAt = startAt + offset;
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(index % 2 ? 740 : 880, toneAt);
+            gain.gain.setValueAtTime(0.0001, toneAt);
+            gain.gain.exponentialRampToValueAtTime(0.28, toneAt + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.0001, toneAt + 0.29);
+            oscillator.connect(gain).connect(context.destination);
+            oscillator.start(toneAt);
+            oscillator.stop(toneAt + 0.31);
+          });
+        };
+
+        if (context.state === "suspended") {
+          context.resume().then(play).catch(() => {
+            setToast("倒计时结束，但声音被浏览器阻止", true);
+          });
+          return;
+        }
+        play();
+      }
+
+      function safeTask(value) {
+        const task = String(value || "").trim();
+        return task || "未标注任务";
+      }
+
+      function normalizeMaintenanceItem(value) {
+        if (!value || typeof value !== "object") {
+          return null;
+        }
+        const title = String(value.title || "").trim().slice(0, MAX_MAINTENANCE_TITLE_LENGTH);
+        const createdAt = String(value.createdAt || "");
+        const createdDate = new Date(createdAt);
+        if (!title || !Number.isFinite(createdDate.getTime())) {
+          return null;
+        }
+        const itemDate = /^\d{4}-\d{2}-\d{2}$/.test(String(value.date || ""))
+          ? String(value.date)
+          : dateKey(createdDate);
+        return {
+          id: String(value.id || `maintenance-${createdDate.getTime()}`).slice(0, 120),
+          date: itemDate,
+          createdAt: createdDate.toISOString(),
+          task: safeTask(value.task),
+          title,
+          note: String(value.note || "").trim().slice(0, MAX_MAINTENANCE_NOTE_LENGTH)
+        };
+      }
+
+      function loadMaintenanceInbox() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(MAINTENANCE_INBOX_KEY) || "[]");
+          if (!Array.isArray(parsed)) {
+            return [];
+          }
+          return parsed.map(normalizeMaintenanceItem).filter(Boolean);
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveMaintenanceInbox() {
+        localStorage.setItem(MAINTENANCE_INBOX_KEY, JSON.stringify(maintenanceInbox));
+      }
+
+      function maintenanceItemsForDate(key) {
+        return maintenanceInbox
+          .filter((item) => item.date === key)
+          .slice()
+          .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+      }
+
+      function openMaintenanceModal() {
+        if (
+          !state.active
+          || normalizeKind(state.active.kind) !== "study"
+          || state.active.pendingPauseChoice
+          || state.active.currentVocabulary
+        ) {
+          return;
+        }
+        maintenanceTask.textContent = safeTask(state.active.task);
+        maintenanceTitleInput.value = "";
+        maintenanceNoteInput.value = "";
+        maintenanceError.textContent = "";
+        maintenanceModal.hidden = false;
+        window.requestAnimationFrame(() => maintenanceTitleInput.focus());
+      }
+
+      function closeMaintenanceModal() {
+        maintenanceModal.hidden = true;
+        maintenanceTitleInput.value = "";
+        maintenanceNoteInput.value = "";
+        maintenanceError.textContent = "";
+      }
+
+      function saveMaintenanceItem() {
+        if (!state.active || normalizeKind(state.active.kind) !== "study") {
+          closeMaintenanceModal();
+          return;
+        }
+        const title = maintenanceTitleInput.value.trim().slice(0, MAX_MAINTENANCE_TITLE_LENGTH);
+        if (!title) {
+          maintenanceError.textContent = "请填写维护事项";
+          maintenanceTitleInput.focus();
+          return;
+        }
+        const createdAt = new Date();
+        const item = normalizeMaintenanceItem({
+          id: typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `maintenance-${createdAt.getTime()}-${Math.random().toString(16).slice(2)}`,
+          date: dateKey(createdAt),
+          createdAt: createdAt.toISOString(),
+          task: state.active.task,
+          title,
+          note: maintenanceNoteInput.value
+        });
+        if (!item) {
+          maintenanceError.textContent = "保存失败";
+          return;
+        }
+        maintenanceInbox.push(item);
+        saveMaintenanceInbox();
+        closeMaintenanceModal();
+        renderRecords();
+        setToast("已记到稍后维护");
+      }
+
+      function removeMaintenanceItem(id) {
+        const item = maintenanceInbox.find((candidate) => candidate.id === id);
+        if (!item || !window.confirm("确认移除这条稍后维护事项？")) {
+          return;
+        }
+        maintenanceInbox = maintenanceInbox.filter((candidate) => candidate.id !== id);
+        saveMaintenanceInbox();
+        renderRecords();
+        setToast("已移除维护事项");
+      }
+
+      function normalizeActualOutput(value) {
+        return String(value || "").trim().slice(0, MAX_ACTUAL_OUTPUT_LENGTH);
+      }
+
+      function normalizeSelfEvaluation(value) {
+        return SELF_EVALUATION_LABELS[value] ? value : "";
+      }
+
+      function selfEvaluationLabel(value) {
+        return SELF_EVALUATION_LABELS[normalizeSelfEvaluation(value)] || "未填写";
+      }
+
+      function defaultMealSlot(date) {
+        const hour = date.getHours();
+        if (hour < 10) {
+          return "breakfast";
+        }
+        if (hour < 16) {
+          return "lunch";
+        }
+        return "dinner";
+      }
+
+      function normalizeKind(kind) {
+        return kind === "meal" ? "meal" : "study";
+      }
+
+      function normalizeSubject(subject) {
+        return SUBJECTS.includes(subject) ? subject : "";
+      }
+
+      function subjectLabel(subject) {
+        const normalized = normalizeSubject(subject);
+        return normalized ? SUBJECT_LABELS[normalized] : "未分类";
+      }
+
+      function normalizeTimerMode(mode) {
+        return mode === "countdown" ? "countdown" : "countup";
+      }
+
+      function normalizeCountdownMinutes(value) {
+        const minutes = Math.floor(Number(value));
+        if (!Number.isFinite(minutes) || minutes < 1) {
+          return DEFAULT_COUNTDOWN_MINUTES;
+        }
+        return Math.min(minutes, MAX_COUNTDOWN_MINUTES);
+      }
+
+      function normalizeTargetMs(value) {
+        const targetMs = Number(value);
+        if (!Number.isFinite(targetMs) || targetMs <= 0) {
+          return DEFAULT_COUNTDOWN_MINUTES * 60 * 1000;
+        }
+        return Math.min(targetMs, MAX_COUNTDOWN_MINUTES * 60 * 1000);
+      }
+
+      function normalizeMealSlot(slot) {
+        return MEAL_SLOT_LABELS[slot] ? slot : defaultMealSlot(now());
+      }
+
+      function emptyState() {
+        return {
+          active: null,
+          pendingCompletion: null,
+          entriesByDate: {},
+          lastTask: "",
+          lastStudyTask: "",
+          lastMealTask: "",
+          lastKind: "study",
+          lastSubject: "",
+          lastMealSlot: defaultMealSlot(now()),
+          lastTimerMode: "countup",
+          lastCountdownMinutes: DEFAULT_COUNTDOWN_MINUTES,
+          selectedDateKey: dateKey(now()),
+          guardianRevision: 0,
+          guardianEventSeq: 0,
+          guardianOutbox: [],
+          controlReceipts: []
+        };
+      }
+
+      function readStoredState() {
+        const current = localStorage.getItem(STORAGE_KEY);
+        if (current) {
+          return current;
+        }
+        for (const key of LEGACY_STORAGE_KEYS) {
+          const legacy = localStorage.getItem(key);
+          if (legacy) {
+            return legacy;
+          }
+        }
+        return "";
+      }
+
+      function loadState() {
+        try {
+          const raw = readStoredState();
+          if (!raw) {
+            return emptyState();
+          }
+          const parsed = JSON.parse(raw);
+          const active = normalizeActive(parsed.active);
+          const pendingCompletion = normalizePendingCompletion(parsed.pendingCompletion);
+          const lastKind = active ? normalizeKind(active.kind) : normalizeKind(parsed.lastKind);
+          const lastTimerMode = active ? normalizeTimerMode(active.timerMode) : normalizeTimerMode(parsed.lastTimerMode);
+          const guardianOutbox = normalizeGuardianOutbox(parsed.guardianOutbox);
+          const highestEventSequence = guardianOutbox.reduce(
+            (highest, event) => Math.max(highest, event.client_sequence),
+            0
+          );
+          return {
+            active,
+            pendingCompletion,
+            entriesByDate: normalizeEntriesByDate(parsed.entriesByDate || {}),
+            lastTask: parsed.lastTask || "",
+            lastStudyTask: parsed.lastStudyTask || (lastKind !== "meal" ? parsed.lastTask || "" : ""),
+            lastMealTask: parsed.lastMealTask || (active && lastKind === "meal" ? active.task : (lastKind === "meal" ? parsed.lastTask || "" : "")),
+            lastKind,
+            lastSubject: normalizeSubject(parsed.lastSubject)
+              || (active && lastKind === "study" ? normalizeSubject(active.subject) : ""),
+            lastMealSlot: active && lastKind === "meal" ? normalizeMealSlot(active.mealSlot) : normalizeMealSlot(parsed.lastMealSlot),
+            lastTimerMode,
+            lastCountdownMinutes: active && lastTimerMode === "countdown"
+              ? normalizeCountdownMinutes(Math.ceil(normalizeTargetMs(active.targetMs) / 60000))
+              : normalizeCountdownMinutes(parsed.lastCountdownMinutes),
+            selectedDateKey: /^\d{4}-\d{2}-\d{2}$/.test(parsed.selectedDateKey || "") ? parsed.selectedDateKey : dateKey(now()),
+            guardianRevision: Number.isFinite(Number(parsed.guardianRevision))
+              ? Math.max(0, Number(parsed.guardianRevision))
+              : 0,
+            guardianEventSeq: Math.max(
+              highestEventSequence,
+              Number.isFinite(Number(parsed.guardianEventSeq))
+                ? Math.max(0, Math.floor(Number(parsed.guardianEventSeq)))
+                : 0
+            ),
+            guardianOutbox,
+            controlReceipts: Array.isArray(parsed.controlReceipts) ? parsed.controlReceipts.filter((receipt) =>
+              receipt && typeof receipt.key === "string" && receipt.key.length <= 160
+              && typeof receipt.fingerprint === "string" && receipt.fingerprint.length <= 600
+              && receipt.result && receipt.result.completed === true
+            ).slice(-32) : []
+          };
+        } catch (error) {
+          return emptyState();
+        }
+      }
+
+      function normalizeGuardianSignal(candidate) {
+        if (!candidate || typeof candidate !== "object") {
+          return null;
+        }
+        const type = String(candidate.type || "");
+        const eventId = String(candidate.event_id || "").slice(0, 160);
+        const clientSequence = Math.max(0, Math.floor(Number(candidate.client_sequence || 0)));
+        const occurredAt = String(candidate.occurred_at || "").slice(0, 64);
+        if (
+          !eventId
+          || !GUARDIAN_SIGNAL_TYPES.has(type)
+          || !Number.isFinite(clientSequence)
+          || clientSequence <= 0
+          || !Number.isFinite(new Date(occurredAt).getTime())
+        ) {
+          return null;
+        }
+        const nonNegativeNumber = (value) => {
+          const number = Number(value);
+          return Number.isFinite(number) ? Math.max(0, number) : 0;
+        };
+        return {
+          event_id: eventId,
+          client_sequence: clientSequence,
+          type,
+          occurred_at: occurredAt,
+          block_id: String(candidate.block_id || "").slice(0, 96),
+          started_at: String(candidate.started_at || "").slice(0, 64),
+          task: String(candidate.task || "").slice(0, 240),
+          study_ms: nonNegativeNumber(candidate.study_ms),
+          break_ms: nonNegativeNumber(candidate.break_ms),
+          distraction_ordinal: Math.max(0, Math.floor(nonNegativeNumber(candidate.distraction_ordinal))),
+          transition_code: String(candidate.transition_code || "").slice(0, 64),
+          source_code: String(candidate.source_code || "").slice(0, 64),
+          related_event_id: String(candidate.related_event_id || "").slice(0, 160),
+          user_reason_code: String(candidate.user_reason_code || "").slice(0, 64)
+        };
+      }
+
+      function normalizeGuardianOutbox(outbox) {
+        if (!Array.isArray(outbox)) {
+          return [];
+        }
+        const seen = new Set();
+        return outbox.map(normalizeGuardianSignal).filter((event) => {
+          if (!event || seen.has(event.event_id)) {
+            return false;
+          }
+          seen.add(event.event_id);
+          return true;
+        }).sort((left, right) => left.client_sequence - right.client_sequence);
+      }
+
+      function loadGuardianSync() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(GUARDIAN_SYNC_KEY) || "null");
+          if (!parsed || typeof parsed !== "object") {
+            throw new Error("missing sync state");
+          }
+          return {
+            lastAckAt: Math.max(0, Number(parsed.lastAckAt || 0)),
+            lastErrorCode: String(parsed.lastErrorCode || "").slice(0, 64),
+            retryAt: Math.max(0, Number(parsed.retryAt || 0)),
+            failureStartedAt: Math.max(0, Number(parsed.failureStartedAt || 0))
+          };
+        } catch (error) {
+          return { lastAckAt: 0, lastErrorCode: "", retryAt: 0, failureStartedAt: 0 };
+        }
+      }
+
+      function persistGuardianSync() {
+        localStorage.setItem(GUARDIAN_SYNC_KEY, JSON.stringify(guardianSync));
+      }
+
+      function readWriterLease() {
+        try {
+          const lease = JSON.parse(localStorage.getItem(WRITER_LEASE_KEY) || "null");
+          if (
+            lease
+            && typeof lease === "object"
+            && typeof lease.tabId === "string"
+            && Number.isFinite(Number(lease.expiresAt))
+          ) {
+            return {
+              tabId: lease.tabId,
+              expiresAt: Number(lease.expiresAt)
+            };
+          }
+        } catch (error) {
+          return null;
+        }
+        return null;
+      }
+
+      function currentTabOwnsWriterLease() {
+        const lease = readWriterLease();
+        return Boolean(lease && lease.tabId === writerTabId && lease.expiresAt > Date.now());
+      }
+
+      function tryAcquireWriterLease() {
+        const currentMs = Date.now();
+        const lease = readWriterLease();
+        if (lease && lease.tabId !== writerTabId && lease.expiresAt > currentMs) {
+          writerLeaseOwned = false;
+          return false;
+        }
+        const candidate = {
+          tabId: writerTabId,
+          expiresAt: currentMs + WRITER_LEASE_TTL_MS
+        };
+        localStorage.setItem(WRITER_LEASE_KEY, JSON.stringify(candidate));
+        writerLeaseOwned = currentTabOwnsWriterLease();
+        return writerLeaseOwned;
+      }
+
+      function ensureWriterLease() {
+        if (currentTabOwnsWriterLease()) {
+          localStorage.setItem(WRITER_LEASE_KEY, JSON.stringify({
+            tabId: writerTabId,
+            expiresAt: Date.now() + WRITER_LEASE_TTL_MS
+          }));
+          writerLeaseOwned = currentTabOwnsWriterLease();
+          return writerLeaseOwned;
+        }
+        writerLeaseOwned = false;
+        return tryAcquireWriterLease();
+      }
+
+      function renewOrAcquireWriterLease() {
+        const wasWriter = writerLeaseOwned;
+        ensureWriterLease();
+        if (writerLeaseOwned && !wasWriter) {
+          state = loadState();
+          scheduleGuardianMirror(0);
+        }
+        if (writerLeaseOwned !== wasWriter) {
+          renderAll();
+        } else {
+          updateGuardianSyncStatus();
+        }
+        return writerLeaseOwned;
+      }
+
+      function releaseWriterLease() {
+        if (!currentTabOwnsWriterLease()) {
+          writerLeaseOwned = false;
+          return;
+        }
+        localStorage.removeItem(WRITER_LEASE_KEY);
+        writerLeaseOwned = false;
+      }
+
+      function applyWriterMode() {
+        const leaseOnlyControls = [
+          editActiveTaskBtn,
+          editPauseReasonBtn,
+          customPauseReasonInput,
+          customPauseReasonBtn,
+          blockReviewOutput,
+          blockReviewSave,
+          maintenanceTitleInput,
+          maintenanceNoteInput,
+          maintenanceSave,
+          editSave,
+          activeEditSave,
+          viewDateInput,
+          prevDateBtn,
+          todayBtn,
+          nextDateBtn
+        ];
+        leaseOnlyControls.forEach((control) => {
+          if (control) {
+            control.disabled = !writerLeaseOwned;
+          }
+        });
+        document.querySelectorAll("[data-action], [data-reason], [data-evaluation]").forEach((control) => {
+          control.disabled = !writerLeaseOwned;
+        });
+        if (writerLeaseOwned) {
+          return;
+        }
+        [
+          taskInput,
+          studyKindBtn,
+          mealKindBtn,
+          mealSlotInput,
+          ...subjectButtons,
+          countUpModeBtn,
+          countDownModeBtn,
+          countdownMinutesInput,
+          startBtn,
+          pauseBtn,
+          vocabularyBtn,
+          distractionBtn,
+          endBtn,
+          blockReviewSave,
+          editActiveTaskBtn,
+          editPauseReasonBtn,
+          deferMaintenanceBtn,
+          maintenanceTitleInput,
+          maintenanceNoteInput,
+          maintenanceSave
+        ].forEach((control) => {
+          if (control) {
+            control.disabled = true;
+          }
+        });
+      }
+
+      function atomicTimerWritesAvailable() {
+        return Boolean(navigator.locks && typeof navigator.locks.request === "function");
+      }
+
+      async function runTimerMutation(callback) {
+        const commit = () => {
+          if (!ensureWriterLease()) {
+            state = loadState();
+            return { ok: false, error: "not_original_writer" };
+          }
+          const storedBefore = readStoredState();
+          state = loadState();
+          const baseRevision = Number(state.guardianRevision || 0);
+          const cursorBefore = [globalShortcutSessionId, globalShortcutLastEventId];
+          timerWriteActive = true;
+          timerWriteDirty = false;
+          timerWriteSemantic = false;
+          timerWriteCursorDirty = false;
+          let value;
+          let changed = false;
+          try {
+            value = callback();
+            if (value && typeof value.then === "function") throw new Error("async_state_mutation");
+            if (timerWriteDirty) {
+              if (!currentTabOwnsWriterLease() || readStoredState() !== storedBefore) throw new Error("state_changed_during_commit");
+              state.guardianRevision = timerWriteSemantic
+                ? Math.max(Date.now(), baseRevision + 1) : baseRevision;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+              changed = true;
+            }
+            if (timerWriteCursorDirty) writeGlobalShortcutCursor();
+          } catch (_error) {
+            state = loadState();
+            [globalShortcutSessionId, globalShortcutLastEventId] = cursorBefore;
+            setToast("状态未保存，请核对原计时器后重试", true);
+            value = { ok: false, error: "commit_failed" };
+          } finally {
+            const semantic = timerWriteSemantic;
+            timerWriteActive = false;
+            timerWriteDirty = false;
+            timerWriteSemantic = false;
+            timerWriteCursorDirty = false;
+            if (changed && semantic) scheduleGuardianMirror();
+            if (changed && controlTransport) queueMicrotask(() => controlTransport.publish());
+          }
+          renderAll();
+          return value;
+        };
+        if (!atomicTimerWritesAvailable()) return commit();
+        return navigator.locks.request(TIMER_WRITE_LOCK, { mode: "exclusive", ifAvailable: true }, (lock) => {
+          if (!lock) { setToast("另一计时操作正在完成，请稍后重试", true); return { ok: false, error: "busy" }; }
+          return commit();
+        });
+      }
+
+      function persistStateWithoutSemanticRevision() {
+        if (!timerWriteActive) { void runTimerMutation(persistStateWithoutSemanticRevision); return; }
+        timerWriteDirty = true;
+      }
+
+      function enqueueGuardianSignal(type, occurredAtMs, options = {}) {
+        if (!state.active || normalizeKind(state.active.kind) !== "study" || !GUARDIAN_SIGNAL_TYPES.has(type)) {
+          return "";
+        }
+        const eventId = String(options.eventId || createGuardianEventId());
+        state.guardianOutbox = normalizeGuardianOutbox(state.guardianOutbox);
+        if (state.guardianOutbox.some((event) => event.event_id === eventId)) {
+          return eventId;
+        }
+        const atMs = Number.isFinite(Number(occurredAtMs)) ? Number(occurredAtMs) : Date.now();
+        state.guardianEventSeq = Math.max(0, Math.floor(Number(state.guardianEventSeq || 0))) + 1;
+        const signal = normalizeGuardianSignal({
+          event_id: eventId,
+          client_sequence: state.guardianEventSeq,
+          type,
+          occurred_at: new Date(atMs).toISOString(),
+          block_id: state.active.blockId,
+          started_at: state.active.startIso,
+          task: safeTask(state.active.task),
+          study_ms: activeStudyMs(atMs),
+          break_ms: activeBreakMs(atMs),
+          distraction_ordinal: options.distractionOrdinal || 0,
+          transition_code: options.transitionCode || "",
+          source_code: options.sourceCode || "timer_button",
+          related_event_id: options.relatedEventId || "",
+          user_reason_code: options.userReasonCode || ""
+        });
+        if (!signal) {
+          return "";
+        }
+        state.guardianOutbox.push(signal);
+        return eventId;
+      }
+
+      function acknowledgeGuardianSignals(eventIds) {
+        const acknowledged = new Set(Array.isArray(eventIds) ? eventIds : []);
+        if (!acknowledged.size) return 0;
+        const before = normalizeGuardianOutbox(state.guardianOutbox);
+        state.guardianOutbox = before.filter((event) => !acknowledged.has(event.event_id));
+        if (before.length !== state.guardianOutbox.length) persistStateWithoutSemanticRevision();
+        return before.length - state.guardianOutbox.length;
+      }
+
+      function pauseReasonCode(reason, custom) {
+        if (custom) {
+          return "custom_private";
+        }
+        const codes = {
+          "上厕所": "personal_bathroom",
+          "装水": "hydration",
+          "打飞机": "private_break",
+          "看 Twitter 休息": "social_media_break",
+          "看 B 站休息": "video_break",
+          "看微信休息": "messaging_break",
+          "看微信视频号休息": "short_video_break",
+          "跟家人聊天休息": "family_conversation",
+          "处理杂七杂八的事情休息": "misc_tasks",
+          "发呆休息": "mind_wandering"
+        };
+        return codes[String(reason || "")] || "preset_other";
+      }
+
+      function normalizeDistractions(distractions) {
+        if (!Array.isArray(distractions)) {
+          return [];
+        }
+        return distractions.map((distraction) => {
+          if (!distraction || typeof distraction !== "object") {
+            return null;
+          }
+          const atMs = typeof distraction.atMs === "number"
+            ? distraction.atMs
+            : new Date(distraction.atIso).getTime();
+          if (!Number.isFinite(atMs)) {
+            return null;
+          }
+          return {
+            ...distraction,
+            atIso: distraction.atIso || new Date(atMs).toISOString(),
+            atMs
+          };
+        }).filter(Boolean);
+      }
+
+      function normalizeVocabularySessions(sessions) {
+        if (!Array.isArray(sessions)) {
+          return [];
+        }
+        return sessions.map((session) => {
+          if (!session || typeof session !== "object") {
+            return null;
+          }
+          const startMs = typeof session.startMs === "number"
+            ? session.startMs
+            : new Date(session.startIso).getTime();
+          const endMs = typeof session.endMs === "number"
+            ? session.endMs
+            : new Date(session.endIso).getTime();
+          if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+            return null;
+          }
+          return {
+            startIso: session.startIso || new Date(startMs).toISOString(),
+            endIso: session.endIso || new Date(endMs).toISOString(),
+            startMs,
+            endMs,
+            durationMs: Math.max(0, endMs - startMs)
+          };
+        }).filter(Boolean).sort((left, right) => left.startMs - right.startMs);
+      }
+
+      function normalizeCurrentVocabulary(session) {
+        if (!session || typeof session !== "object") {
+          return null;
+        }
+        const startMs = typeof session.startMs === "number"
+          ? session.startMs
+          : new Date(session.startIso).getTime();
+        if (!Number.isFinite(startMs)) {
+          return null;
+        }
+        return {
+          startIso: session.startIso || new Date(startMs).toISOString(),
+          startMs
+        };
+      }
+
+      function normalizeEntry(entry) {
+        const kind = normalizeKind(entry.kind);
+        const timerMode = normalizeTimerMode(entry.timerMode);
+        const startMs = typeof entry.startMs === "number" ? entry.startMs : new Date(entry.startIso).getTime();
+        const endMs = typeof entry.endMs === "number" ? entry.endMs : new Date(entry.endIso).getTime();
+        return {
+          ...entry,
+          id: String(entry.id || Date.now()),
+          blockId: String(entry.blockId || entry.id || `legacy-${startMs}`),
+          kind,
+          timerMode,
+          targetMs: timerMode === "countdown" ? normalizeTargetMs(entry.targetMs) : 0,
+          countdownCompleted: timerMode === "countdown" && Boolean(entry.countdownCompleted),
+          endedWhileRunning: entry.endedWhileRunning === true,
+          mealSlot: kind === "meal" ? normalizeMealSlot(entry.mealSlot) : "",
+          subject: kind === "study" ? normalizeSubject(entry.subject) : "",
+          task: safeTask(entry.task),
+          actualOutput: kind === "study" ? normalizeActualOutput(entry.actualOutput) : "",
+          selfEvaluation: kind === "study" ? normalizeSelfEvaluation(entry.selfEvaluation) : "",
+          startMs,
+          endMs,
+          pauses: Array.isArray(entry.pauses) ? entry.pauses : [],
+          vocabularySessions: normalizeVocabularySessions(entry.vocabularySessions),
+          distractions: normalizeDistractions(entry.distractions)
+        };
+      }
+
+      function normalizePendingCompletion(pendingCompletion) {
+        if (!pendingCompletion || typeof pendingCompletion !== "object") {
+          return null;
+        }
+        const candidate = pendingCompletion.entry;
+        if (!candidate || typeof candidate !== "object") {
+          return null;
+        }
+        const entry = normalizeEntry(candidate);
+        if (
+          normalizeKind(entry.kind) !== "study"
+          || !Number.isFinite(entry.startMs)
+          || !Number.isFinite(entry.endMs)
+          || entry.endMs < entry.startMs
+        ) {
+          return null;
+        }
+        return {
+          entry,
+          countdownComplete: Boolean(pendingCompletion.countdownComplete),
+          createdAtIso: String(pendingCompletion.createdAtIso || new Date(entry.endMs).toISOString())
+        };
+      }
+
+      function normalizeEntriesByDate(entriesByDate) {
+        const normalized = {};
+        for (const [key, entries] of Object.entries(entriesByDate || {})) {
+          normalized[key] = Array.isArray(entries) ? entries.map(normalizeEntry) : [];
+        }
+        return normalized;
+      }
+
+      function normalizeActive(active) {
+        if (!active) {
+          return null;
+        }
+        if (Array.isArray(active.runs)) {
+          active.pauses = Array.isArray(active.pauses) ? active.pauses : [];
+          active.vocabularySessions = normalizeVocabularySessions(active.vocabularySessions);
+          active.currentVocabulary = normalizeCurrentVocabulary(active.currentVocabulary);
+          active.distractions = normalizeDistractions(active.distractions);
+          active.pendingPauseChoice = active.pendingPauseChoice || null;
+          active.currentPause = active.currentPause || null;
+          active.kind = normalizeKind(active.kind);
+          active.timerMode = normalizeTimerMode(active.timerMode);
+          active.targetMs = active.timerMode === "countdown" ? normalizeTargetMs(active.targetMs) : 0;
+          active.mealSlot = active.kind === "meal" ? normalizeMealSlot(active.mealSlot) : "";
+          active.subject = active.kind === "study" ? normalizeSubject(active.subject) : "";
+          active.task = safeTask(active.task);
+          active.blockId = String(active.blockId || `legacy-${active.startMs || new Date(active.startIso).getTime()}`);
+          if (active.currentVocabulary) {
+            const lastRun = active.runs[active.runs.length - 1];
+            if (lastRun && typeof lastRun.endMs !== "number") {
+              lastRun.endMs = active.currentVocabulary.startMs;
+              lastRun.endIso = active.currentVocabulary.startIso;
+            }
+          }
+          return active;
+        }
+        const kind = normalizeKind(active.kind);
+        return {
+          task: safeTask(active.task),
+          kind,
+          timerMode: "countup",
+          targetMs: 0,
+          mealSlot: kind === "meal" ? normalizeMealSlot(active.mealSlot) : "",
+          subject: kind === "study" ? normalizeSubject(active.subject) : "",
+          blockId: String(active.blockId || `legacy-${active.startMs || new Date(active.startIso).getTime()}`),
+          startIso: active.startIso,
+          startMs: active.startMs || new Date(active.startIso).getTime(),
+          runs: [{ startIso: active.startIso, startMs: active.startMs || new Date(active.startIso).getTime() }],
+          pauses: [],
+          vocabularySessions: [],
+          currentVocabulary: null,
+          distractions: [],
+          pendingPauseChoice: active.pendingPause ? {
+            startIso: active.pendingPause.endIso,
+            startMs: active.pendingPause.endMs
+          } : null,
+          currentPause: null
+        };
+      }
+
+      function saveState() {
+        if (!timerWriteActive) {
+          setToast("计时写入入口无效，请重新核对原页面", true);
+          return false;
+        }
+        timerWriteDirty = true;
+        timerWriteSemantic = true;
+        return true;
+      }
+
+      function guardianTimerPayload() {
+        guardianHeartbeatSeq = Math.max(
+          Date.now(),
+          guardianHeartbeatSeq + 1,
+          Number(state.guardianRevision || 0)
+        );
+        const todayKey = dateKey(now());
+        const todayEntries = (state.entriesByDate[todayKey] || [])
+          .filter((entry) => normalizeKind(entry.kind) !== "meal");
+        const recentCompleted = Object.values(state.entriesByDate || {})
+          .flatMap((entries) => Array.isArray(entries) ? entries : [])
+          .filter((entry) => normalizeKind(entry.kind) !== "meal")
+          .sort((left, right) => Number(left.endMs || 0) - Number(right.endMs || 0))
+          .slice(-10);
+        const latestCompleted = recentCompleted.length
+          ? recentCompleted[recentCompleted.length - 1]
+          : null;
+        const active = state.active && normalizeKind(state.active.kind) === "study"
+          ? {
+              kind: "study",
+              block_id: state.active.blockId,
+              task: safeTask(state.active.task),
+              timer_mode: normalizeTimerMode(state.active.timerMode),
+              start_iso: state.active.startIso,
+              running: isLearningActivityRunning(),
+              current_pause: state.active.currentPause
+                ? {
+                    start_iso: state.active.currentPause.startIso
+                  }
+                : null,
+              study_ms: activeStudyMs(),
+              break_ms: activeBreakMs(),
+              distraction_count: distractionCount(state.active)
+            }
+          : null;
+
+        return {
+          schema: "left_screen_study_timer_guardian_v1",
+          exported_at: new Date().toISOString(),
+          client_id: guardianClientId,
+          revision: Number(state.guardianRevision || 0),
+          heartbeat_ms: guardianHeartbeatSeq,
+          signals: normalizeGuardianOutbox(state.guardianOutbox).slice(0, 64),
+          active,
+          latest_completed: latestCompleted
+            ? {
+                id: latestCompleted.id,
+                block_id: latestCompleted.blockId,
+                kind: "study",
+                task: safeTask(latestCompleted.task),
+                started_at: latestCompleted.startIso,
+                ended_at: latestCompleted.endIso,
+                study_ms: entryStudyMs(latestCompleted),
+                break_ms: entryBreakMs(latestCompleted),
+                gross_ms: Math.max(0, Number(latestCompleted.endMs || 0) - Number(latestCompleted.startMs || 0)),
+                ended_while_running: latestCompleted.endedWhileRunning === true,
+                distraction_count: distractionCount(latestCompleted)
+              }
+            : null,
+          recent_completed: recentCompleted.map((entry) => ({
+            id: entry.id,
+            block_id: entry.blockId,
+            kind: "study",
+            task: safeTask(entry.task),
+            started_at: entry.startIso,
+            ended_at: entry.endIso,
+            study_ms: entryStudyMs(entry),
+            break_ms: entryBreakMs(entry),
+            gross_ms: Math.max(0, Number(entry.endMs || 0) - Number(entry.startMs || 0)),
+            ended_while_running: entry.endedWhileRunning === true,
+            distraction_count: distractionCount(entry)
+          })),
+          today: {
+            date: todayKey,
+            completed_blocks: todayEntries.length,
+            study_ms: todayEntries.reduce((sum, entry) => sum + entryStudyMs(entry), 0),
+            break_ms: todayEntries.reduce((sum, entry) => sum + entryBreakMs(entry), 0),
+            distraction_count: todayEntries.reduce((sum, entry) => sum + distractionCount(entry), 0)
+          }
+        };
+      }
+
+      function updateGuardianSyncStatus() {
+        if (!writerLeaseOwned) {
+          guardianSyncStatus.dataset.status = "retrying";
+          guardianSyncStatus.textContent = "只读，等待自动接管";
+          guardianSyncStatus.title = "另一计时器标签页正在维护学习值守连接";
+          return;
+        }
+        const currentMs = Date.now();
+        const failureStartedAt = guardianSync.failureStartedAt || guardianSync.lastAckAt || guardianPageStartedAt;
+        const failureSeconds = Math.max(0, Math.floor((currentMs - failureStartedAt) / 1000));
+        let status = "retrying";
+        let text = "自动重连中";
+        if (guardianSync.lastErrorCode === "stale_revision") {
+          status = "conflict";
+          text = "另一标签页较新";
+        } else if (!guardianSync.lastErrorCode && guardianSync.lastAckAt > 0) {
+          status = "connected";
+          text = "值守已连接";
+        } else if (failureSeconds * 1000 >= GUARDIAN_SUSTAINED_FAILURE_MS) {
+          status = "interrupted";
+          text = "同步中断 " + failureSeconds + " 秒";
+        }
+        guardianSyncStatus.dataset.status = status;
+        guardianSyncStatus.textContent = text;
+        guardianSyncStatus.title = guardianSync.lastErrorCode
+          ? "错误代码：" + guardianSync.lastErrorCode
+          : "计时器会自动维持与学习值守的连接";
+        if (
+          guardianSync.lastErrorCode
+          && failureSeconds * 1000 >= GUARDIAN_SUSTAINED_FAILURE_MS
+          && !guardianFailureToastShown
+        ) {
+          guardianFailureToastShown = true;
+          setToast("学习值守同步持续中断，正在自动重连", true);
+        }
+      }
+
+      function recordGuardianFailure(code, retryDelayMs) {
+        const currentMs = Date.now();
+        guardianSync.lastErrorCode = String(code || "unknown_error").slice(0, 64);
+        guardianSync.failureStartedAt = guardianSync.failureStartedAt || currentMs;
+        guardianSync.retryAt = currentMs + Math.max(0, Number(retryDelayMs || 0));
+        persistGuardianSync();
+        updateGuardianSyncStatus();
+      }
+
+      function recordGuardianSuccess() {
+        guardianSync = {
+          lastAckAt: Date.now(),
+          lastErrorCode: "",
+          retryAt: 0,
+          failureStartedAt: 0
+        };
+        guardianRetryIndex = 0;
+        guardianFailureToastShown = false;
+        persistGuardianSync();
+        updateGuardianSyncStatus();
+      }
+
+      function guardianRequestError(code) {
+        const error = new Error(String(code || "guardian_request_failed"));
+        error.guardianCode = String(code || "guardian_request_failed");
+        return error;
+      }
+
+      async function mirrorGuardianState() {
+        window.clearTimeout(guardianMirrorTimeoutId);
+        guardianMirrorTimeoutId = null;
+        if (!ensureWriterLease()) {
+          updateGuardianSyncStatus();
+          return;
+        }
+        if (guardianMirrorInFlight) {
+          guardianMirrorPending = true;
+          return;
+        }
+        guardianMirrorInFlight = true;
+        guardianMirrorPending = false;
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), GUARDIAN_REQUEST_TIMEOUT_MS);
+        const payload = guardianTimerPayload();
+        const submittedEventIds = payload.signals.map((event) => event.event_id);
+        let nextDelayMs = GUARDIAN_HEARTBEAT_MS;
+        try {
+          const response = await fetch(GUARDIAN_TIMER_ENDPOINT, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-store",
+            credentials: "omit",
+            headers: { "Content-Type": "text/plain;charset=UTF-8" },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+          let result;
+          try {
+            result = await response.json();
+          } catch (error) {
+            throw guardianRequestError("invalid_bridge_response");
+          }
+          if (!response.ok || !result || result.ok !== true) {
+            throw guardianRequestError(
+              result && result.error ? result.error : "http_" + response.status
+            );
+          }
+          const acknowledgedEventIds = Array.isArray(result.acked_event_ids)
+            ? result.acked_event_ids.map((eventId) => String(eventId || "")).filter(Boolean)
+            : [];
+          await runTimerMutation(() => acknowledgeGuardianSignals(acknowledgedEventIds));
+          const acknowledged = new Set(acknowledgedEventIds);
+          const conflicted = new Set(
+            Array.isArray(result.conflict_event_ids)
+              ? result.conflict_event_ids.map((eventId) => String(eventId || "")).filter(Boolean)
+              : []
+          );
+          const rejected = new Set(
+            Array.isArray(result.rejected_event_ids)
+              ? result.rejected_event_ids.map((eventId) => String(eventId || "")).filter(Boolean)
+              : []
+          );
+          if (submittedEventIds.some((eventId) => conflicted.has(eventId))) {
+            throw guardianRequestError("event_conflict");
+          }
+          if (submittedEventIds.some((eventId) => rejected.has(eventId))) {
+            throw guardianRequestError("event_rejected");
+          }
+          if (submittedEventIds.some((eventId) => !acknowledged.has(eventId))) {
+            throw guardianRequestError("event_ack_incomplete");
+          }
+          if (result.accepted !== true) {
+            const reason = String(result.reason || "state_not_accepted");
+            if (reason === "stale_revision") {
+              recordGuardianFailure("stale_revision", GUARDIAN_HEARTBEAT_MS);
+              nextDelayMs = GUARDIAN_HEARTBEAT_MS;
+              return;
+            }
+            throw guardianRequestError(reason);
+          }
+
+          guardianSync.lastAckAt = Date.now();
+          recordGuardianSuccess();
+          if (normalizeGuardianOutbox(state.guardianOutbox).length > 0) {
+            guardianMirrorPending = true;
+          }
+        } catch (error) {
+          const errorCode = error && error.name === "AbortError"
+            ? "request_timeout"
+            : String(error && error.guardianCode || "network_error");
+          nextDelayMs = GUARDIAN_RETRY_DELAYS_MS[
+            Math.min(guardianRetryIndex, GUARDIAN_RETRY_DELAYS_MS.length - 1)
+          ];
+          guardianRetryIndex = Math.min(
+            guardianRetryIndex + 1,
+            GUARDIAN_RETRY_DELAYS_MS.length - 1
+          );
+          recordGuardianFailure(errorCode, nextDelayMs);
+        } finally {
+          window.clearTimeout(timeoutId);
+          guardianMirrorInFlight = false;
+          if (guardianMirrorPending) {
+            guardianMirrorPending = false;
+            scheduleGuardianMirror(0);
+          } else {
+            scheduleGuardianMirror(nextDelayMs);
+          }
+        }
+      }
+
+      function scheduleGuardianMirror(delayMs = 250) {
+        if (guardianMirrorInFlight) {
+          guardianMirrorPending = true;
+          return;
+        }
+        window.clearTimeout(guardianMirrorTimeoutId);
+        guardianMirrorTimeoutId = window.setTimeout(
+          mirrorGuardianState,
+          Math.max(0, Number(delayMs || 0))
+        );
+      }
+
+      function sendGuardianPagehideSnapshot() {
+        if (guardianPageHideSent || !currentTabOwnsWriterLease()) {
+          return;
+        }
+        guardianPageHideSent = true;
+        const body = JSON.stringify(guardianTimerPayload());
+        let sent = false;
+        try {
+          if (typeof navigator.sendBeacon === "function") {
+            sent = navigator.sendBeacon(
+              GUARDIAN_TIMER_ENDPOINT,
+              new Blob([body], { type: "text/plain;charset=UTF-8" })
+            );
+          }
+        } catch (error) {
+          sent = false;
+        }
+        if (!sent) {
+          fetch(GUARDIAN_TIMER_ENDPOINT, {
+            method: "POST",
+            mode: "cors",
+            cache: "no-store",
+            credentials: "omit",
+            keepalive: true,
+            headers: { "Content-Type": "text/plain;charset=UTF-8" },
+            body
+          }).catch(() => {
+            recordGuardianFailure("pagehide_send_failed", GUARDIAN_RETRY_DELAYS_MS[0]);
+          });
+        }
+      }
+
+      function selectedDateKey() {
+        return state.selectedDateKey || dateKey(now());
+      }
+
+      function setSelectedDateKey(key) {
+        if (!timerWriteActive) { void runTimerMutation(() => setSelectedDateKey(key)); return; }
+        state.selectedDateKey = /^\d{4}-\d{2}-\d{2}$/.test(key || "") ? key : dateKey(now());
+        saveState();
+        renderRecords();
+      }
+
+      function currentEntries() {
+        const key = selectedDateKey();
+        return state.entriesByDate[key] || [];
+      }
+
+      function setToast(message, isError) {
+        toast.textContent = message || "";
+        toast.classList.toggle("error", Boolean(isError));
+        if (message) {
+          window.clearTimeout(setToast.timer);
+          setToast.timer = window.setTimeout(() => {
+            toast.textContent = "";
+            toast.classList.remove("error");
+          }, 3000);
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function isRunning() {
+        if (!state.active) {
+          return false;
+        }
+        return !state.active.pendingPauseChoice
+          && !state.active.currentPause
+          && !state.active.currentVocabulary;
+      }
+
+      function isVocabularyActive() {
+        return Boolean(state.active && state.active.currentVocabulary);
+      }
+
+      function isLearningActivityRunning() {
+        return isRunning() || isVocabularyActive();
+      }
+
+      function runDuration(run, fallbackMs) {
+        const endMs = typeof run.endMs === "number" ? run.endMs : fallbackMs;
+        return Math.max(0, endMs - run.startMs);
+      }
+
+      function pauseDuration(pause, fallbackMs) {
+        const endMs = typeof pause.endMs === "number" ? pause.endMs : fallbackMs;
+        return Math.max(0, endMs - pause.startMs);
+      }
+
+      function vocabularyDuration(session, fallbackMs) {
+        const endMs = typeof session.endMs === "number" ? session.endMs : fallbackMs;
+        return Math.max(0, endMs - session.startMs);
+      }
+
+      function activePrimaryStudyMs(atMs = Date.now()) {
+        if (!state.active) {
+          return 0;
+        }
+        const current = Number.isFinite(Number(atMs)) ? Number(atMs) : Date.now();
+        return state.active.runs.reduce((sum, run) => sum + runDuration(run, current), 0);
+      }
+
+      function activeVocabularyMs(atMs = Date.now()) {
+        if (!state.active) {
+          return 0;
+        }
+        const current = Number.isFinite(Number(atMs)) ? Number(atMs) : Date.now();
+        const finished = normalizeVocabularySessions(state.active.vocabularySessions)
+          .reduce((sum, session) => sum + vocabularyDuration(session, session.endMs), 0);
+        const currentSession = state.active.currentVocabulary
+          ? vocabularyDuration(state.active.currentVocabulary, current)
+          : 0;
+        return finished + currentSession;
+      }
+
+      function activeStudyMs(atMs = Date.now()) {
+        return activePrimaryStudyMs(atMs) + activeVocabularyMs(atMs);
+      }
+
+      function countdownCompletionEndMs(active) {
+        const targetMs = normalizeTargetMs(active.targetMs);
+        let accumulatedMs = 0;
+        for (const run of active.runs) {
+          const runEndMs = typeof run.endMs === "number" ? run.endMs : Date.now();
+          const durationMs = runDuration(run, runEndMs);
+          if (accumulatedMs + durationMs >= targetMs) {
+            return run.startMs + Math.max(0, targetMs - accumulatedMs);
+          }
+          accumulatedMs += durationMs;
+        }
+        return Date.now();
+      }
+
+      function completeCountdownIfNeeded() {
+        if (!state.active || normalizeTimerMode(state.active.timerMode) !== "countdown" || !isRunning()) {
+          return false;
+        }
+        if (activePrimaryStudyMs() < normalizeTargetMs(state.active.targetMs)) {
+          return false;
+        }
+        if (!timerWriteActive) {
+          void runTimerMutation(completeCountdownIfNeeded);
+          return false;
+        }
+        endSession(countdownCompletionEndMs(state.active), { countdownComplete: true });
+        return true;
+      }
+
+      function activeBreakMs(atMs = Date.now()) {
+        if (!state.active) {
+          return 0;
+        }
+        const current = Number.isFinite(Number(atMs)) ? Number(atMs) : Date.now();
+        const finished = state.active.pauses.reduce((sum, pause) => sum + pauseDuration(pause, current), 0);
+        const currentPause = state.active.currentPause ? pauseDuration(state.active.currentPause, current) : 0;
+        return finished + currentPause;
+      }
+
+      function entryStudyMs(entry) {
+        if (typeof entry.studyMs === "number") {
+          return entry.studyMs;
+        }
+        return typeof entry.durationMs === "number" ? entry.durationMs : Math.max(0, entry.endMs - entry.startMs);
+      }
+
+      function entryVocabularyMs(entry) {
+        if (typeof entry.vocabularyMs === "number") {
+          return Math.max(0, entry.vocabularyMs);
+        }
+        return normalizeVocabularySessions(entry.vocabularySessions)
+          .reduce((sum, session) => sum + vocabularyDuration(session, session.endMs), 0);
+      }
+
+      function entryPrimaryStudyMs(entry) {
+        if (typeof entry.primaryStudyMs === "number") {
+          return Math.max(0, entry.primaryStudyMs);
+        }
+        return Math.max(0, entryStudyMs(entry) - entryVocabularyMs(entry));
+      }
+
+      function entryBreakMs(entry) {
+        if (typeof entry.breakMs === "number") {
+          return entry.breakMs;
+        }
+        if (Array.isArray(entry.pauses)) {
+          return entry.pauses.reduce((sum, pause) => sum + pauseDuration(pause, pause.endMs), 0);
+        }
+        return 0;
+      }
+
+      function entryGrossMs(entry) {
+        if (typeof entry.grossMs === "number") {
+          return entry.grossMs;
+        }
+        return Math.max(0, entry.endMs - entry.startMs);
+      }
+
+      function pauseSummary(entry) {
+        if (Array.isArray(entry.pauses) && entry.pauses.length) {
+          return entry.pauses.map((pause) => {
+            const start = new Date(pause.startIso);
+            const end = new Date(pause.endIso);
+            return shortTimeText(start) + "-" + shortTimeText(end) + " " + pause.reason;
+          }).join("；");
+        }
+        if (entry.pauseReason) {
+          return entry.pauseReason;
+        }
+        return "无";
+      }
+
+      function vocabularySummary(entry) {
+        const sessions = normalizeVocabularySessions(entry.vocabularySessions);
+        if (!sessions.length) {
+          const totalMs = entryVocabularyMs(entry);
+          return totalMs ? "合计 " + formatDuration(totalMs) + "｜明细未记录" : "无";
+        }
+        const startDateKey = dateKey(new Date(entry.startIso));
+        const ranges = sessions.map((session) => {
+          const start = new Date(session.startIso);
+          const end = new Date(session.endIso);
+          const startText = dateKey(start) === startDateKey ? shortTimeText(start) : monthDayTimeText(start);
+          const endText = dateKey(end) === startDateKey ? shortTimeText(end) : monthDayTimeText(end);
+          return startText + "-" + endText;
+        });
+        return "合计 " + formatDuration(entryVocabularyMs(entry)) + "｜" + ranges.join("；");
+      }
+
+      function distractionSummary(entry) {
+        const distractions = normalizeDistractions(entry.distractions);
+        if (!distractions.length) {
+          return "无";
+        }
+        const startDateKey = dateKey(new Date(entry.startIso));
+        const times = distractions.map((distraction) => {
+          const date = new Date(distraction.atIso);
+          return dateKey(date) === startDateKey ? timeText(date) : monthDayTimeText(date) + ":" + pad(date.getSeconds());
+        });
+        return distractions.length + " 次｜" + times.join("、");
+      }
+
+      function distractionCount(entry) {
+        return normalizeDistractions(entry.distractions).length;
+      }
+
+      function entryLabel(entry) {
+        const kind = normalizeKind(entry.kind);
+        if (kind === "meal") {
+          return "吃饭｜" + MEAL_SLOT_LABELS[normalizeMealSlot(entry.mealSlot)];
+        }
+        const subject = normalizeSubject(entry.subject);
+        return subject ? "学习｜" + SUBJECT_LABELS[subject] : "学习";
+      }
+
+      function entryTitle(entry) {
+        return entryLabel(entry) + "｜" + safeTask(entry.task);
+      }
+
+      function renderKindControls(locked) {
+        const kind = normalizeKind(state.lastKind);
+        studyKindBtn.classList.toggle("active", kind === "study");
+        mealKindBtn.classList.toggle("active", kind === "meal");
+        taskInput.disabled = Boolean(locked);
+        studyKindBtn.disabled = Boolean(locked);
+        mealKindBtn.disabled = Boolean(locked);
+        mealSlotInput.disabled = Boolean(locked) || kind !== "meal";
+        mealSlotInput.value = normalizeMealSlot(state.lastMealSlot);
+        const subject = normalizeSubject(state.lastSubject);
+        subjectButtons.forEach((button) => {
+          button.classList.toggle("active", button.dataset.subject === subject);
+          button.disabled = Boolean(locked) || kind !== "study";
+        });
+      }
+
+      function renderTimerModeControls(locked) {
+        const timerMode = state.active
+          ? normalizeTimerMode(state.active.timerMode)
+          : state.pendingCompletion
+            ? normalizeTimerMode(state.pendingCompletion.entry.timerMode)
+            : normalizeTimerMode(state.lastTimerMode);
+        const countdownMinutes = state.active && timerMode === "countdown"
+          ? normalizeCountdownMinutes(Math.ceil(normalizeTargetMs(state.active.targetMs) / 60000))
+          : state.pendingCompletion && timerMode === "countdown"
+            ? normalizeCountdownMinutes(Math.ceil(normalizeTargetMs(state.pendingCompletion.entry.targetMs) / 60000))
+            : normalizeCountdownMinutes(state.lastCountdownMinutes);
+
+        countUpModeBtn.classList.toggle("active", timerMode === "countup");
+        countDownModeBtn.classList.toggle("active", timerMode === "countdown");
+        countUpModeBtn.disabled = Boolean(locked);
+        countDownModeBtn.disabled = Boolean(locked);
+        countdownDurationField.hidden = timerMode !== "countdown";
+        countdownMinutesInput.disabled = Boolean(locked);
+        if (document.activeElement !== countdownMinutesInput || locked) {
+          countdownMinutesInput.value = String(countdownMinutes);
+        }
+      }
+
+      function setTimerMode(mode) {
+        if (!timerWriteActive) { void runTimerMutation(() => setTimerMode(mode)); return; }
+        if (state.active || state.pendingCompletion) {
+          return;
+        }
+        countdownCompletionDisplayUntil = 0;
+        state.lastTimerMode = normalizeTimerMode(mode);
+        saveState();
+        renderTimer();
+      }
+
+      function updateCountdownMinutes() {
+        if (!timerWriteActive) { void runTimerMutation(() => updateCountdownMinutes()); return; }
+        if (state.active || state.pendingCompletion) {
+          return false;
+        }
+        const value = Math.floor(Number(countdownMinutesInput.value));
+        if (!Number.isFinite(value) || value < 1 || value > MAX_COUNTDOWN_MINUTES) {
+          return false;
+        }
+        countdownCompletionDisplayUntil = 0;
+        state.lastCountdownMinutes = value;
+        saveState();
+        renderTimer();
+        return true;
+      }
+
+      function normalizeCountdownInput() {
+        if (!timerWriteActive) { void runTimerMutation(() => normalizeCountdownInput()); return; }
+        if (state.active || state.pendingCompletion) {
+          return;
+        }
+        countdownCompletionDisplayUntil = 0;
+        state.lastCountdownMinutes = normalizeCountdownMinutes(countdownMinutesInput.value);
+        countdownMinutesInput.value = String(state.lastCountdownMinutes);
+        saveState();
+        renderTimer();
+      }
+
+      function setEntryKind(kind) {
+        if (!timerWriteActive) { void runTimerMutation(() => setEntryKind(kind)); return; }
+        if (state.active || state.pendingCompletion) {
+          return;
+        }
+        const previousKind = normalizeKind(state.lastKind);
+        const currentTask = String(taskInput.value || "").trim();
+        if (previousKind === "meal") {
+          state.lastMealTask = currentTask;
+        } else {
+          state.lastStudyTask = currentTask;
+        }
+        state.lastKind = normalizeKind(kind);
+        if (state.lastKind === "meal" && !MEAL_SLOT_LABELS[state.lastMealSlot]) {
+          state.lastMealSlot = defaultMealSlot(now());
+        }
+        taskInput.value = state.lastKind === "meal" ? state.lastMealTask || "" : state.lastStudyTask || "";
+        saveState();
+        renderTimer();
+      }
+
+      function setMealSlot(slot) {
+        if (!timerWriteActive) { void runTimerMutation(() => setMealSlot(slot)); return; }
+        if (state.active || state.pendingCompletion) {
+          return;
+        }
+        state.lastMealSlot = normalizeMealSlot(slot);
+        saveState();
+        renderTimer();
+      }
+
+      function setEntrySubject(subject) {
+        if (!timerWriteActive) { void runTimerMutation(() => setEntrySubject(subject)); return; }
+        if (state.active || state.pendingCompletion) {
+          return;
+        }
+        state.lastSubject = normalizeSubject(subject);
+        saveState();
+        renderTimer();
+      }
+
+      function newEntryTask(kind, slot) {
+        const task = String(taskInput.value || "").trim();
+        if (task) {
+          return task;
+        }
+        return kind === "meal" ? MEAL_SLOT_LABELS[slot] : "未标注任务";
+      }
+
+      function renderClock() {
+        const current = now();
+        todayDate.textContent = current.toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long"
+        });
+        liveClock.textContent = timeText(current);
+      }
+
+      function renderTimerContents() {
+        const controlsLocked = Boolean(state.active || state.pendingCompletion);
+        renderKindControls(controlsLocked);
+        renderTimerModeControls(controlsLocked);
+        stateDot.classList.remove("running", "vocabulary");
+        timerDisplay.classList.remove("countdown-warning", "vocabulary-active");
+        vocabularyBtn.hidden = true;
+        vocabularyBtn.classList.remove("returning");
+        vocabularyBtn.textContent = "去背单词";
+        vocabularyBtn.title = "暂停原学习块并开始记录背单词时间";
+        if (!state.active) {
+          if (state.pendingCompletion) {
+            const pendingEntry = state.pendingCompletion.entry;
+            const countdownCompleted = normalizeTimerMode(pendingEntry.timerMode) === "countdown"
+              && pendingEntry.countdownCompleted;
+            const vocabularyMs = entryVocabularyMs(pendingEntry);
+            timerDisplay.textContent = countdownCompleted ? "00:00:00" : formatDuration(entryPrimaryStudyMs(pendingEntry));
+            timerMeta.textContent = (countdownCompleted ? "倒计时结束" : "本段已结束")
+              + (vocabularyMs ? "｜背词 " + formatDuration(vocabularyMs) : "")
+              + "｜请填写实际产出和执行评价";
+            activeTask.textContent = entryTitle(pendingEntry);
+            stateText.textContent = "等待本段复盘";
+            startBtn.textContent = "开始";
+            startBtn.disabled = true;
+            pauseBtn.disabled = true;
+            pauseBtn.classList.remove("pause");
+            distractionBtn.textContent = "分心";
+            distractionBtn.disabled = true;
+            activeEditActions.hidden = true;
+            editPauseReasonBtn.hidden = true;
+            endBtn.disabled = true;
+            pauseReasonPanel.hidden = true;
+            return;
+          }
+          const previewTimerMode = normalizeTimerMode(state.lastTimerMode);
+          const previewTargetMs = normalizeCountdownMinutes(state.lastCountdownMinutes) * 60 * 1000;
+          const showingCountdownCompletion = previewTimerMode === "countdown" && Date.now() < countdownCompletionDisplayUntil;
+          timerDisplay.textContent = showingCountdownCompletion
+            ? "00:00:00"
+            : previewTimerMode === "countdown"
+              ? formatCountdownDuration(previewTargetMs)
+              : "00:00:00";
+          timerMeta.textContent = showingCountdownCompletion
+            ? "倒计时结束"
+            : previewTimerMode === "countdown"
+              ? "等待开始｜倒计时 " + formatDuration(previewTargetMs)
+              : "等待开始";
+          const previewKind = normalizeKind(state.lastKind);
+          const previewSlot = normalizeMealSlot(state.lastMealSlot);
+          activeTask.textContent = previewKind === "meal"
+            ? "吃饭｜" + MEAL_SLOT_LABELS[previewSlot] + "｜" + newEntryTask(previewKind, previewSlot)
+            : safeTask(taskInput.value || state.lastStudyTask || state.lastTask);
+          stateText.textContent = showingCountdownCompletion ? "已到点" : "未开始";
+          startBtn.textContent = "开始";
+          startBtn.disabled = false;
+          pauseBtn.disabled = true;
+          pauseBtn.classList.remove("pause");
+          distractionBtn.textContent = "分心";
+          distractionBtn.disabled = true;
+          activeEditActions.hidden = true;
+          editPauseReasonBtn.hidden = true;
+          endBtn.disabled = true;
+          pauseReasonPanel.hidden = true;
+          return;
+        }
+
+        const start = new Date(state.active.startIso);
+        const primaryStudyMs = activePrimaryStudyMs();
+        const vocabularyMs = activeVocabularyMs();
+        const breakMs = activeBreakMs();
+        const distractions = normalizeDistractions(state.active.distractions);
+        const isStudy = normalizeKind(state.active.kind) === "study";
+        const vocabularyActive = isVocabularyActive();
+        deferMaintenanceBtn.hidden = !isStudy;
+        deferMaintenanceBtn.disabled = !writerLeaseOwned || Boolean(state.active.pendingPauseChoice) || vocabularyActive;
+        const timerMode = normalizeTimerMode(state.active.timerMode);
+        const targetMs = timerMode === "countdown" ? normalizeTargetMs(state.active.targetMs) : 0;
+        const remainingMs = timerMode === "countdown" ? Math.max(0, targetMs - primaryStudyMs) : 0;
+        timerDisplay.textContent = vocabularyActive
+          ? formatDuration(vocabularyDuration(state.active.currentVocabulary, Date.now()))
+          : timerMode === "countdown"
+            ? formatCountdownDuration(remainingMs)
+            : formatDuration(primaryStudyMs);
+        timerDisplay.classList.toggle("countdown-warning", !vocabularyActive && timerMode === "countdown" && remainingMs <= 60000);
+        timerDisplay.classList.toggle("vocabulary-active", vocabularyActive);
+        activeTask.textContent = vocabularyActive
+          ? "背单词｜原任务：" + safeTask(state.active.task)
+          : entryTitle(state.active);
+        activeEditActions.hidden = false;
+        editActiveTaskBtn.textContent = isStudy ? "修改学习标题" : "修改事项";
+        editPauseReasonBtn.hidden = !state.active.currentPause;
+        distractionBtn.textContent = distractions.length ? "分心 · " + distractions.length : "分心";
+        distractionBtn.disabled = !isStudy || !isRunning();
+        endBtn.disabled = Boolean(state.active.pendingPauseChoice) || vocabularyActive;
+        vocabularyBtn.hidden = !isStudy || (!isRunning() && !vocabularyActive);
+        vocabularyBtn.disabled = !writerLeaseOwned || (!isRunning() && !vocabularyActive);
+        vocabularyBtn.textContent = vocabularyActive ? "结束背词并继续" : "去背单词";
+        vocabularyBtn.title = vocabularyActive
+          ? "保存本次背词时间并继续原学习块"
+          : "暂停原学习块并开始记录背单词时间";
+        vocabularyBtn.classList.toggle("returning", vocabularyActive);
+
+        if (state.active.pendingPauseChoice) {
+          timerMeta.textContent = "暂停于 " + timeText(new Date(state.active.pendingPauseChoice.startIso)) + "，请选择原因";
+          stateText.textContent = "等待选择暂停原因";
+          startBtn.disabled = true;
+          pauseBtn.disabled = true;
+          pauseBtn.classList.remove("pause");
+          pauseReasonPanel.hidden = false;
+          return;
+        }
+
+        if (state.active.currentPause) {
+          timerMeta.textContent = "暂停中：" + state.active.currentPause.reason + "｜休息 " + formatDuration(pauseDuration(state.active.currentPause, Date.now()));
+          stateText.textContent = timerMode === "countdown" ? "倒计时暂停中" : "暂停中";
+          startBtn.textContent = "继续";
+          startBtn.disabled = false;
+          pauseBtn.disabled = true;
+          pauseBtn.classList.remove("pause");
+          pauseReasonPanel.hidden = true;
+          return;
+        }
+
+        if (vocabularyActive) {
+          const frozenAt = timerMode === "countdown"
+            ? "原倒计时剩余 " + formatCountdownDuration(remainingMs)
+            : "原任务已计时 " + formatDuration(primaryStudyMs);
+          timerMeta.textContent = "背词合计 " + formatDuration(vocabularyMs) + "｜" + frozenAt;
+          stateText.textContent = "背单词中";
+          stateDot.classList.add("vocabulary");
+          startBtn.textContent = "开始";
+          startBtn.disabled = true;
+          pauseBtn.disabled = true;
+          pauseBtn.classList.remove("pause");
+          distractionBtn.disabled = true;
+          pauseReasonPanel.hidden = true;
+          return;
+        }
+
+        const distractionMeta = isStudy
+          ? distractions.length
+            ? "｜分心 " + distractions.length + " 次，最近 " + timeText(new Date(distractions[distractions.length - 1].atIso))
+            : "｜分心 0 次"
+          : "";
+        const timerModeMeta = timerMode === "countdown"
+          ? "倒计时目标 " + formatDuration(targetMs)
+          : "本段开始于 " + timeText(start);
+        const vocabularyMeta = vocabularyMs ? "｜背词合计 " + formatDuration(vocabularyMs) : "";
+        timerMeta.textContent = timerModeMeta + "｜休息合计 " + formatDuration(breakMs) + vocabularyMeta + distractionMeta;
+        stateText.textContent = timerMode === "countdown" ? "倒计时中" : "计时中";
+        stateDot.classList.add("running");
+        startBtn.textContent = "开始";
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        pauseBtn.classList.add("pause");
+        pauseReasonPanel.hidden = true;
+      }
+
+      function renderTimer() {
+        renderTimerContents();
+        applyWriterMode();
+      }
+
+      function updateReviewEvaluationButtons() {
+        blockReviewEvaluation.querySelectorAll("[data-evaluation]").forEach((button) => {
+          const selected = button.dataset.evaluation === selectedSelfEvaluation;
+          button.classList.toggle("active", selected);
+          button.setAttribute("aria-checked", selected ? "true" : "false");
+        });
+      }
+
+      function renderBlockReview() {
+        const pending = state.pendingCompletion;
+        if (!pending) {
+          blockReviewModal.hidden = true;
+          reviewingEntryId = null;
+          selectedSelfEvaluation = "";
+          blockReviewError.textContent = "";
+          return;
+        }
+
+        const entry = pending.entry;
+        const vocabularyMs = entryVocabularyMs(entry);
+        blockReviewTask.textContent = safeTask(entry.task);
+        blockReviewMeta.textContent = timeRangeText(entry)
+          + "｜净学习 " + formatDuration(entryStudyMs(entry))
+          + (vocabularyMs ? "（背词 " + formatDuration(vocabularyMs) + "）" : "")
+          + "｜休息 " + formatDuration(entryBreakMs(entry));
+
+        if (reviewingEntryId !== entry.id) {
+          reviewingEntryId = entry.id;
+          blockReviewOutput.value = normalizeActualOutput(entry.actualOutput);
+          selectedSelfEvaluation = normalizeSelfEvaluation(entry.selfEvaluation);
+          blockReviewError.textContent = "";
+          window.requestAnimationFrame(() => {
+            if (!blockReviewModal.hidden && writerLeaseOwned) {
+              blockReviewOutput.focus();
+            }
+          });
+        }
+        updateReviewEvaluationButtons();
+        blockReviewModal.hidden = false;
+      }
+
+      function entryActions(entry) {
+        return '<div class="row-actions"><button class="small-btn" type="button" data-action="edit" data-id="' + escapeHtml(entry.id) + '">编辑</button><button class="small-btn delete" type="button" data-action="delete" data-id="' + escapeHtml(entry.id) + '">删除</button></div>';
+      }
+
+      function renderMealSummary(mealEntries) {
+        const items = MEAL_SLOTS.map((slot) => {
+          const slotEntries = mealEntries
+            .filter((entry) => normalizeMealSlot(entry.mealSlot) === slot)
+            .sort((a, b) => a.startMs - b.startMs);
+          const timeTextValue = slotEntries.length
+            ? slotEntries.map(timeRangeText).join("；")
+            : "未记录";
+          return [
+            '<div class="meal-item">',
+            '<div class="meal-label">' + MEAL_SLOT_LABELS[slot] + "</div>",
+            '<div class="meal-time">' + escapeHtml(timeTextValue) + "</div>",
+            "</div>"
+          ].join("");
+        }).join("");
+        return '<div class="meal-summary">' + items + "</div>";
+      }
+
+      function renderStudyTable(studyEntries) {
+        if (!studyEntries.length) {
+          return '<div class="empty">本日还没有学习记录</div>';
+        }
+        const rows = studyEntries.slice().sort((a, b) => b.startMs - a.startMs).map((entry) => [
+          "<tr>",
+          "<td>" + escapeHtml(timeRangeText(entry)) + "</td>",
+          "<td>" + escapeHtml(entrySubjectSummary(entry)) + "</td>",
+          "<td>" + formatDuration(entryGrossMs(entry)) + "</td>",
+          "<td>" + formatDuration(entryStudyMs(entry)) + "</td>",
+          "<td>" + formatDuration(entryBreakMs(entry)) + "</td>",
+          '<td class="task-cell">' + escapeHtml(entry.task) + "</td>",
+          '<td class="output-cell">' + escapeHtml(entry.actualOutput || "未填写") + "</td>",
+          '<td class="evaluation-cell">' + escapeHtml(selfEvaluationLabel(entry.selfEvaluation)) + "</td>",
+          '<td class="distraction-cell">' + escapeHtml(distractionSummary(entry)) + "</td>",
+          '<td class="reason-cell">' + escapeHtml(pauseSummary(entry)) + "</td>",
+          "<td>" + entryActions(entry) + "</td>",
+          "</tr>"
+        ].join("")).join("");
+
+        return [
+          '<div class="table-wrap">',
+          '<table class="study-table">',
+          "<thead><tr><th>时间段</th><th>科目</th><th>总窗口</th><th>净学习</th><th>休息</th><th>任务</th><th>实际产出</th><th>执行自评</th><th>分心记录</th><th>暂停明细</th><th>操作</th></tr></thead>",
+          "<tbody>",
+          rows,
+          "</tbody>",
+          "</table>",
+          "</div>"
+        ].join("");
+      }
+
+      function renderMealTable(mealEntries) {
+        if (!mealEntries.length) {
+          return '<div class="empty">本日还没有吃饭记录</div>';
+        }
+        const rows = mealEntries.slice().sort((a, b) => b.startMs - a.startMs).map((entry) => [
+          "<tr>",
+          "<td>" + MEAL_SLOT_LABELS[normalizeMealSlot(entry.mealSlot)] + "</td>",
+          "<td>" + escapeHtml(timeRangeText(entry)) + "</td>",
+          "<td>" + formatDuration(entryGrossMs(entry)) + "</td>",
+          '<td class="task-cell">' + escapeHtml(entry.task) + "</td>",
+          "<td>" + entryActions(entry) + "</td>",
+          "</tr>"
+        ].join("")).join("");
+
+        return [
+          '<div class="table-wrap">',
+          "<table>",
+          "<thead><tr><th>餐次</th><th>时间段</th><th>用时</th><th>备注</th><th>操作</th></tr></thead>",
+          "<tbody>",
+          rows,
+          "</tbody>",
+          "</table>",
+          "</div>"
+        ].join("");
+      }
+
+      function renderMaintenanceInbox(key) {
+        const items = maintenanceItemsForDate(key);
+        if (!items.length) {
+          return '<div class="empty">本日没有稍后维护事项</div>';
+        }
+        const rows = items.map((item) => [
+          "<tr>",
+          "<td>" + escapeHtml(timeText(new Date(item.createdAt))) + "</td>",
+          '<td class="task-cell">' + escapeHtml(item.task) + "</td>",
+          '<td class="output-cell">' + escapeHtml(item.title) + "</td>",
+          '<td class="reason-cell">' + escapeHtml(item.note || "无") + "</td>",
+          '<td><div class="row-actions"><button class="small-btn delete" type="button" data-action="maintenance-remove" data-id="' + escapeHtml(item.id) + '">移除</button></div></td>',
+          "</tr>"
+        ].join("")).join("");
+        return [
+          '<div class="table-wrap">',
+          "<table>",
+          "<thead><tr><th>记录时间</th><th>当时任务</th><th>维护事项</th><th>现象</th><th>操作</th></tr></thead>",
+          "<tbody>",
+          rows,
+          "</tbody>",
+          "</table>",
+          "</div>"
+        ].join("");
+      }
+
+      function subjectTotalsByEntry(studyEntries) {
+        const totals = new Map();
+        let uncategorizedMs = 0;
+        for (const entry of studyEntries) {
+          if (normalizeKind(entry.kind) === "meal") {
+            continue;
+          }
+          const studyMs = Math.max(0, entryStudyMs(entry));
+          // Vocabulary is included in net study already; move its share to English.
+          const vocabularyMs = Math.min(studyMs, entryVocabularyMs(entry));
+          const primaryMs = studyMs - vocabularyMs;
+          const subject = normalizeSubject(entry.subject);
+          if (subject) {
+            totals.set(subject, (totals.get(subject) || 0) + primaryMs);
+          } else {
+            uncategorizedMs += primaryMs;
+          }
+          totals.set("english", (totals.get("english") || 0) + vocabularyMs);
+        }
+        return { totals, uncategorizedMs };
+      }
+
+      function entrySubjectSummary(entry) {
+        const { totals, uncategorizedMs } = subjectTotalsByEntry([entry]);
+        const parts = SUBJECTS.filter((subject) => totals.get(subject) > 0)
+          .map((subject) => SUBJECT_LABELS[subject] + " " + formatDuration(totals.get(subject)));
+        if (uncategorizedMs) parts.push("未分类 " + formatDuration(uncategorizedMs));
+        return parts.length > 1 ? parts.join("；") : (parts.length ? parts[0].split(" ")[0] : subjectLabel(entry.subject));
+      }
+
+      function subjectItemMarkup(name, timeTextValue, uncategorized) {
+        return [
+          '<div class="subject-item' + (uncategorized ? " uncategorized" : "") + '">',
+          '<div class="subject-item-name">' + escapeHtml(name) + "</div>",
+          '<div class="subject-item-time">' + timeTextValue + "</div>",
+          "</div>"
+        ].join("");
+      }
+
+      function renderSubjectSummary(key, studyEntries) {
+        const { totals, uncategorizedMs } = subjectTotalsByEntry(studyEntries);
+        const totalMs = SUBJECTS.reduce((sum, subject) => sum + (totals.get(subject) || 0), 0) + uncategorizedMs;
+        subjectPanelTitle.textContent = key === dateKey(now()) ? "今日三科时间" : key + " 三科时间";
+        const items = SUBJECTS.map((subject) => subjectItemMarkup(
+          SUBJECT_LABELS[subject],
+          formatDuration(totals.get(subject) || 0),
+          false
+        ));
+        items.push(subjectItemMarkup("合计", formatDuration(totalMs), false));
+        if (uncategorizedMs) {
+          items.push(subjectItemMarkup("未分类", formatDuration(uncategorizedMs), true));
+        }
+        subjectSummary.innerHTML = items.join("");
+      }
+
+      function renderRecords() {
+        const key = selectedDateKey();
+        const entries = currentEntries();
+        const studyEntries = entries.filter((entry) => normalizeKind(entry.kind) !== "meal");
+        const mealEntries = entries.filter((entry) => normalizeKind(entry.kind) === "meal");
+        const totalStudyMs = studyEntries.reduce((sum, entry) => sum + entryStudyMs(entry), 0);
+        const totalVocabularyMs = studyEntries.reduce((sum, entry) => sum + entryVocabularyMs(entry), 0);
+        const totalBreakMs = studyEntries.reduce((sum, entry) => sum + entryBreakMs(entry), 0);
+        const totalDistractions = studyEntries.reduce((sum, entry) => sum + distractionCount(entry), 0);
+        const totalMealMs = mealEntries.reduce((sum, entry) => sum + entryGrossMs(entry), 0);
+
+        recordsTitle.textContent = displayDateText(key) + " 记录";
+        viewDateInput.value = key;
+        todayTotal.textContent = "学习净时长 " + formatDuration(totalStudyMs)
+          + "｜学习休息 " + formatDuration(totalBreakMs)
+          + "｜分心 " + totalDistractions + " 次｜吃饭 " + formatDuration(totalMealMs);
+
+        recordsContainer.innerHTML = [
+          '<div class="record-group">',
+          '<div class="record-group-title">吃饭时间 <span>早 / 中 / 晚</span></div>',
+          renderMealSummary(mealEntries),
+          renderMealTable(mealEntries),
+          "</div>",
+          '<div class="record-group">',
+          '<div class="record-group-title">学习时间 <span>和吃饭分开统计</span></div>',
+          renderStudyTable(studyEntries),
+          "</div>",
+          '<div class="record-group">',
+          '<div class="record-group-title">稍后维护 <span>只记录，不在学习中处理</span></div>',
+          renderMaintenanceInbox(key),
+          "</div>"
+        ].join("");
+        renderSubjectSummary(key, studyEntries);
+        applyWriterMode();
+      }
+
+      function renderLive() {
+        renderClock();
+        const lastHealthyAt = guardianSync.lastAckAt || guardianPageStartedAt;
+        if (
+          writerLeaseOwned
+          && !guardianMirrorInFlight
+          && Date.now() - lastHealthyAt > GUARDIAN_WATCHDOG_MS
+          && guardianSync.lastErrorCode !== "stale_revision"
+        ) {
+          const firstOverdue = !guardianSync.lastErrorCode;
+          if (firstOverdue) {
+            recordGuardianFailure("heartbeat_overdue", 0);
+          }
+          if (firstOverdue || guardianMirrorTimeoutId === null) {
+            scheduleGuardianMirror(0);
+          }
+        }
+        updateGuardianSyncStatus();
+        if (completeCountdownIfNeeded()) {
+          return;
+        }
+        renderTimer();
+      }
+
+      function renderAll() {
+        renderLive();
+        renderRecords();
+        renderBlockReview();
+        applyWriterMode();
+      }
+
+      function startSession(options = {}) {
+        if (!timerWriteActive) { void runTimerMutation(() => startSession(options)); return; }
+        const current = now();
+        if (state.pendingCompletion) {
+          renderBlockReview();
+          setToast("请先保存上一段的实际产出和执行评价", true);
+          return;
+        }
+        if (!state.active) {
+          countdownCompletionDisplayUntil = 0;
+          const currentKind = normalizeKind(state.lastKind);
+          const timerMode = normalizeTimerMode(state.lastTimerMode);
+          const currentMealSlot = currentKind === "meal" ? normalizeMealSlot(state.lastMealSlot) : "";
+          const currentSubject = currentKind === "study" ? normalizeSubject(state.lastSubject) : "";
+          if (currentKind === "study" && !currentSubject && options.allowMissingSubject !== true) {
+            setToast("请先选择科目：408 / 数学 / 英语", true);
+            return;
+          }
+          const currentTask = newEntryTask(currentKind, currentMealSlot);
+          let targetMs = 0;
+          if (timerMode === "countdown") {
+            const countdownMinutes = Math.floor(Number(countdownMinutesInput.value));
+            if (!Number.isFinite(countdownMinutes) || countdownMinutes < 1 || countdownMinutes > MAX_COUNTDOWN_MINUTES) {
+              setToast("倒计时时长需要填写 1 到 " + MAX_COUNTDOWN_MINUTES + " 分钟", true);
+              countdownMinutesInput.focus();
+              return;
+            }
+            state.lastCountdownMinutes = countdownMinutes;
+            targetMs = countdownMinutes * 60 * 1000;
+            if (!armCountdownAlarm()) {
+              setToast("当前浏览器不支持声音提醒", true);
+            }
+          }
+          state.active = {
+            blockId: createGuardianBlockId(),
+            task: currentTask,
+            kind: currentKind,
+            timerMode,
+            targetMs,
+            mealSlot: currentMealSlot,
+            subject: currentSubject,
+            startIso: current.toISOString(),
+            startMs: current.getTime(),
+            runs: [{ startIso: current.toISOString(), startMs: current.getTime() }],
+            pauses: [],
+            vocabularySessions: [],
+            currentVocabulary: null,
+            distractions: [],
+            pendingPauseChoice: null,
+            currentPause: null
+          };
+          state.lastTask = currentTask;
+          state.lastKind = currentKind;
+          state.lastTimerMode = timerMode;
+          state.lastMealSlot = currentMealSlot || state.lastMealSlot;
+          if (currentKind === "study") {
+            state.lastSubject = currentSubject;
+          }
+          if (currentKind === "meal") {
+            state.lastMealTask = currentTask;
+          } else {
+            state.lastStudyTask = currentTask;
+          }
+          taskInput.value = currentTask;
+          saveState();
+          renderAll();
+          return;
+        }
+
+        if (state.active.currentPause) {
+          if (normalizeTimerMode(state.active.timerMode) === "countdown") {
+            armCountdownAlarm();
+          }
+          const completedPause = state.active.currentPause;
+          completedPause.endIso = current.toISOString();
+          completedPause.endMs = current.getTime();
+          completedPause.durationMs = pauseDuration(completedPause, current.getTime());
+          state.active.pauses.push(completedPause);
+          state.active.currentPause = null;
+          state.active.runs.push({ startIso: current.toISOString(), startMs: current.getTime() });
+          enqueueGuardianSignal("pause_resumed", current.getTime(), {
+            transitionCode: "paused_to_running",
+            sourceCode: "timer_button",
+            relatedEventId: completedPause.guardianPauseEventId || "",
+            userReasonCode: completedPause.reasonCode || pauseReasonCode(completedPause.reason, false)
+          });
+          saveState();
+          renderAll();
+        }
+      }
+
+      function startVocabularyInterlude() {
+        if (!timerWriteActive) { void runTimerMutation(() => startVocabularyInterlude()); return; }
+        if (
+          !state.active
+          || normalizeKind(state.active.kind) !== "study"
+          || !isRunning()
+        ) {
+          return;
+        }
+        if (completeCountdownIfNeeded()) {
+          return;
+        }
+        const current = now();
+        const lastRun = state.active.runs[state.active.runs.length - 1];
+        if (lastRun && typeof lastRun.endMs !== "number") {
+          lastRun.endIso = current.toISOString();
+          lastRun.endMs = current.getTime();
+        }
+        state.active.currentVocabulary = {
+          startIso: current.toISOString(),
+          startMs: current.getTime()
+        };
+        if (!saveState()) {
+          renderAll();
+          return;
+        }
+        renderAll();
+        setToast("原学习块已暂停，开始记录背单词");
+      }
+
+      function resumeFromVocabularyInterlude() {
+        if (!timerWriteActive) { void runTimerMutation(() => resumeFromVocabularyInterlude()); return; }
+        if (!state.active || !state.active.currentVocabulary) {
+          return;
+        }
+        const current = now();
+        const completedVocabulary = {
+          ...state.active.currentVocabulary,
+          endIso: current.toISOString(),
+          endMs: current.getTime(),
+          durationMs: vocabularyDuration(state.active.currentVocabulary, current.getTime())
+        };
+        state.active.vocabularySessions = normalizeVocabularySessions([
+          ...(state.active.vocabularySessions || []),
+          completedVocabulary
+        ]);
+        state.active.currentVocabulary = null;
+        state.active.runs.push({
+          startIso: current.toISOString(),
+          startMs: current.getTime()
+        });
+        if (normalizeTimerMode(state.active.timerMode) === "countdown") {
+          armCountdownAlarm();
+        }
+        if (!saveState()) {
+          renderAll();
+          return;
+        }
+        renderAll();
+        setToast("背词 " + formatDuration(completedVocabulary.durationMs) + " 已计入学习，原任务继续计时");
+      }
+
+      function toggleVocabularyInterlude() {
+        if (isVocabularyActive()) {
+          resumeFromVocabularyInterlude();
+          return;
+        }
+        startVocabularyInterlude();
+      }
+
+      function pauseSession() {
+        if (!timerWriteActive) { void runTimerMutation(() => pauseSession()); return; }
+        if (!state.active || !isRunning()) {
+          return;
+        }
+        if (completeCountdownIfNeeded()) {
+          return;
+        }
+        const current = now();
+        const lastRun = state.active.runs[state.active.runs.length - 1];
+        if (lastRun && typeof lastRun.endMs !== "number") {
+          lastRun.endIso = current.toISOString();
+          lastRun.endMs = current.getTime();
+        }
+        const pauseEventId = enqueueGuardianSignal("pause_started", current.getTime(), {
+          transitionCode: "running_to_paused",
+          sourceCode: "timer_button"
+        });
+        state.active.pendingPauseChoice = {
+          startIso: current.toISOString(),
+          startMs: current.getTime(),
+          guardianEventId: pauseEventId
+        };
+        saveState();
+        renderAll();
+      }
+
+      function choosePauseReason(reason, options = {}) {
+        if (!timerWriteActive) { void runTimerMutation(() => choosePauseReason(reason, options)); return; }
+        if (!state.active || !state.active.pendingPauseChoice) {
+          return;
+        }
+        const pendingPause = state.active.pendingPauseChoice;
+        const reasonCode = pauseReasonCode(reason, options.custom === true);
+        state.active.currentPause = {
+          reason,
+          reasonCode,
+          startIso: pendingPause.startIso,
+          startMs: pendingPause.startMs,
+          guardianPauseEventId: pendingPause.guardianEventId || ""
+        };
+        state.active.pendingPauseChoice = null;
+        enqueueGuardianSignal("pause_reason_selected", Date.now(), {
+          transitionCode: "paused_reason_selected",
+          sourceCode: "timer_button",
+          relatedEventId: pendingPause.guardianEventId || "",
+          userReasonCode: reasonCode
+        });
+        saveState();
+        renderAll();
+      }
+
+      function submitCustomPauseReason() {
+        const reason = String(customPauseReasonInput.value || "").trim();
+        if (!reason) {
+          setToast("请先填写暂停原因", true);
+          customPauseReasonInput.focus();
+          return;
+        }
+        customPauseReasonInput.value = "";
+        choosePauseReason(reason, { custom: true });
+      }
+
+      function openActiveEditor(mode) {
+        if (!state.active) {
+          return;
+        }
+        if (mode === "pause" && !state.active.currentPause) {
+          setToast("当前没有可修改的暂停原因", true);
+          return;
+        }
+        activeEditMode = mode;
+        if (mode === "pause") {
+          activeEditTitle.textContent = "修改暂停原因";
+          activeEditLabel.textContent = "暂停原因";
+          activeEditInput.value = state.active.currentPause.reason || "";
+        } else {
+          const isMeal = normalizeKind(state.active.kind) === "meal";
+          activeEditTitle.textContent = isMeal ? "修改事项" : "修改学习标题";
+          activeEditLabel.textContent = isMeal ? "事项" : "学习标题";
+          activeEditInput.value = state.active.task || "";
+        }
+        activeEditError.textContent = "";
+        activeEditModal.hidden = false;
+        activeEditInput.focus();
+        activeEditInput.select();
+      }
+
+      function closeActiveEditor() {
+        activeEditMode = null;
+        activeEditInput.value = "";
+        activeEditError.textContent = "";
+        activeEditModal.hidden = true;
+      }
+
+      function saveActiveEditor() {
+        if (!timerWriteActive) { void runTimerMutation(() => saveActiveEditor()); return; }
+        if (!state.active || !activeEditMode) {
+          closeActiveEditor();
+          return;
+        }
+        const value = String(activeEditInput.value || "").trim();
+        if (!value) {
+          activeEditError.textContent = activeEditMode === "pause" ? "暂停原因不能为空" : "标题不能为空";
+          activeEditInput.focus();
+          return;
+        }
+        let message;
+        if (activeEditMode === "pause") {
+          if (!state.active.currentPause) {
+            closeActiveEditor();
+            setToast("当前没有可修改的暂停原因", true);
+            return;
+          }
+          state.active.currentPause.reason = value;
+          state.active.currentPause.reasonCode = "custom_private";
+          const relatedPauseEventId = state.active.currentPause.guardianPauseEventId || "";
+          if (relatedPauseEventId) {
+            enqueueGuardianSignal("pause_reason_selected", Date.now(), {
+              transitionCode: "paused_reason_selected",
+              sourceCode: "timer_button",
+              relatedEventId: relatedPauseEventId,
+              userReasonCode: "custom_private"
+            });
+          }
+          message = "已修改暂停原因";
+        } else {
+          state.active.task = value;
+          state.lastTask = value;
+          if (normalizeKind(state.active.kind) === "meal") {
+            state.lastMealTask = value;
+          } else {
+            state.lastStudyTask = value;
+          }
+          taskInput.value = value;
+          message = "已修改当前标题";
+        }
+        saveState();
+        closeActiveEditor();
+        renderTimer();
+        setToast(message);
+      }
+
+      function recordDistraction(atMs, options = {}) {
+        if (!timerWriteActive) { void runTimerMutation(() => recordDistraction(atMs, options)); return "pending"; }
+        if (!ensureWriterLease()) {
+          return "temporarily_unavailable";
+        }
+        if (!state.active || normalizeKind(state.active.kind) !== "study" || !isRunning()) {
+          return "not_applicable";
+        }
+        const requestedMs = Number(atMs);
+        const currentMs = Number.isFinite(requestedMs) ? Math.round(requestedMs) : Date.now();
+        const stableEventId = String(options.eventId || "");
+        if (
+          stableEventId
+          && normalizeDistractions(state.active.distractions).some(
+            (distraction) => distraction.guardianEventId === stableEventId
+          )
+        ) {
+          return "already_recorded";
+        }
+        const lastRun = state.active.runs[state.active.runs.length - 1];
+        if (!lastRun || currentMs < lastRun.startMs) {
+          return "not_applicable";
+        }
+        if (currentMs > Date.now() + 5000) {
+          return "temporarily_unavailable";
+        }
+        const current = new Date(currentMs);
+        state.active.distractions = normalizeDistractions(state.active.distractions);
+        const eventId = stableEventId || createGuardianEventId();
+        state.active.distractions.push({
+          atIso: current.toISOString(),
+          atMs: currentMs,
+          guardianEventId: eventId
+        });
+        enqueueGuardianSignal("distraction_recorded", currentMs, {
+          eventId,
+          transitionCode: "running_to_running",
+          sourceCode: options.sourceCode || "timer_button",
+          distractionOrdinal: state.active.distractions.length
+        });
+        if (!saveState()) {
+          return "temporarily_unavailable";
+        }
+        renderTimer();
+        distractionBtn.classList.remove("recorded");
+        void distractionBtn.offsetWidth;
+        distractionBtn.classList.add("recorded");
+        window.clearTimeout(recordDistraction.timer);
+        recordDistraction.timer = window.setTimeout(() => distractionBtn.classList.remove("recorded"), 520);
+        setToast("已记录分心：" + timeText(current));
+        return "recorded";
+      }
+
+      function saveGlobalShortcutCursor() {
+        if (timerWriteActive) { timerWriteCursorDirty = true; return; }
+        writeGlobalShortcutCursor();
+      }
+
+      function writeGlobalShortcutCursor() {
+        if (!globalShortcutSessionId) {
+          return;
+        }
+        localStorage.setItem(GLOBAL_SHORTCUT_CURSOR_KEY, JSON.stringify({
+          sessionId: globalShortcutSessionId,
+          lastEventId: globalShortcutLastEventId
+        }));
+      }
+
+      function loadGlobalShortcutCursor(sessionId) {
+        globalShortcutSessionId = sessionId;
+        globalShortcutLastEventId = 0;
+        try {
+          const stored = JSON.parse(localStorage.getItem(GLOBAL_SHORTCUT_CURSOR_KEY) || "null");
+          if (stored && stored.sessionId === sessionId && Number.isFinite(Number(stored.lastEventId))) {
+            globalShortcutLastEventId = Math.max(0, Math.floor(Number(stored.lastEventId)));
+          }
+        } catch (error) {
+          globalShortcutLastEventId = 0;
+        }
+      }
+
+      function receiveGlobalDistractionEvents(payload) {
+        if (!timerWriteActive) { void runTimerMutation(() => receiveGlobalDistractionEvents(payload)); return; }
+        if (!ensureWriterLease()) {
+          return;
+        }
+        if (!payload || typeof payload.sessionId !== "string" || !Array.isArray(payload.events)) {
+          return;
+        }
+        const safeSessionId = payload.sessionId.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 96);
+        if (!safeSessionId) {
+          return;
+        }
+        if (globalShortcutSessionId !== safeSessionId) {
+          loadGlobalShortcutCursor(safeSessionId);
+        }
+
+        const events = payload.events
+          .map((item) => {
+            const id = Math.floor(Number(item && item.id));
+            return {
+              id,
+              atMs: Number(item && item.atMs),
+              eventId: "hs-" + safeSessionId + "-" + id
+            };
+          })
+          .filter((item) => Number.isFinite(item.id) && item.id > globalShortcutLastEventId && Number.isFinite(item.atMs))
+          .sort((left, right) => left.id - right.id);
+
+        for (const item of events) {
+          const outcome = recordDistraction(item.atMs, {
+            eventId: item.eventId,
+            sourceCode: "hammerspoon_right_option"
+          });
+          if (!["recorded", "already_recorded", "not_applicable"].includes(outcome)) {
+            break;
+          }
+          globalShortcutLastEventId = Math.max(globalShortcutLastEventId, item.id);
+        }
+        saveGlobalShortcutCursor();
+      }
+
+      function resetGlobalShortcutLoad() {
+        window.clearTimeout(globalShortcutLoadTimeoutId);
+        globalShortcutLoadTimeoutId = null;
+        globalShortcutLoadInFlight = false;
+        if (globalShortcutScript) {
+          globalShortcutScript.remove();
+          globalShortcutScript = null;
+        }
+      }
+
+      function pollGlobalShortcutSignal() {
+        if (!writerLeaseOwned || globalShortcutLoadInFlight) {
+          return;
+        }
+        globalShortcutLoadInFlight = true;
+        const script = document.createElement("script");
+        const complete = () => {
+          if (globalShortcutScript === script) {
+            resetGlobalShortcutLoad();
+          } else {
+            script.remove();
+          }
+        };
+        globalShortcutScript = script;
+        script.src = GLOBAL_SHORTCUT_SIGNAL_FILE + "?v=" + Date.now();
+        script.async = true;
+        script.addEventListener("load", complete, { once: true });
+        script.addEventListener("error", complete, { once: true });
+        globalShortcutLoadTimeoutId = window.setTimeout(complete, GLOBAL_SHORTCUT_LOAD_TIMEOUT_MS);
+        document.head.appendChild(script);
+      }
+
+      window.receiveGlobalDistractionEvents = receiveGlobalDistractionEvents;
+
+      function handleDistractionShortcut(event) {
+        if (event.code !== "AltRight" || event.repeat || rightOptionDown || event.metaKey || event.ctrlKey || event.shiftKey) {
+          return;
+        }
+        rightOptionDown = true;
+        if (!activeEditModal.hidden || !editModal.hidden) {
+          return;
+        }
+        const target = event.target;
+        const tagName = String(target && target.tagName || "").toLowerCase();
+        if (["input", "textarea", "select"].includes(tagName) || Boolean(target && target.isContentEditable)) {
+          return;
+        }
+        if (["recorded", "already_recorded", "pending"].includes(recordDistraction())) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+
+      function releaseDistractionShortcut(event) {
+        if (event.code === "AltRight") {
+          rightOptionDown = false;
+        }
+      }
+
+      function endSession(requestedEndMs, options = {}) {
+        if (!timerWriteActive) { void runTimerMutation(() => endSession(requestedEndMs, options)); return; }
+        if (!state.active || state.active.pendingPauseChoice || state.active.currentVocabulary) {
+          return;
+        }
+        const endedWhileRunning = isRunning();
+        const parsedEndMs = Number(requestedEndMs);
+        const endMs = Math.max(
+          state.active.startMs,
+          Number.isFinite(parsedEndMs) ? parsedEndMs : Date.now()
+        );
+        const current = new Date(endMs);
+        const endIso = current.toISOString();
+        const pauses = state.active.pauses.slice();
+        const timerMode = normalizeTimerMode(state.active.timerMode);
+        const targetMs = timerMode === "countdown" ? normalizeTargetMs(state.active.targetMs) : 0;
+
+        if (state.active.currentPause) {
+          state.active.currentPause.endIso = endIso;
+          state.active.currentPause.endMs = endMs;
+          state.active.currentPause.durationMs = pauseDuration(state.active.currentPause, endMs);
+          pauses.push(state.active.currentPause);
+        } else {
+          const lastRun = state.active.runs[state.active.runs.length - 1];
+          if (lastRun && typeof lastRun.endMs !== "number") {
+            lastRun.endIso = current.toISOString();
+            lastRun.endMs = current.getTime();
+          }
+        }
+
+        const vocabularySessions = normalizeVocabularySessions(state.active.vocabularySessions);
+        const primaryStudyMs = state.active.runs.reduce((sum, run) => sum + runDuration(run, run.endMs), 0);
+        const vocabularyMs = vocabularySessions.reduce(
+          (sum, session) => sum + vocabularyDuration(session, session.endMs),
+          0
+        );
+        const studyMs = primaryStudyMs + vocabularyMs;
+        const breakMs = pauses.reduce((sum, pause) => sum + pauseDuration(pause, pause.endMs), 0);
+        const grossMs = Math.max(0, endMs - state.active.startMs);
+        const entry = {
+          id: String(Date.now()),
+          blockId: state.active.blockId,
+          task: state.active.task,
+          kind: normalizeKind(state.active.kind),
+          timerMode,
+          targetMs,
+          countdownCompleted: timerMode === "countdown" && Boolean(options.countdownComplete),
+          endedWhileRunning,
+          mealSlot: normalizeKind(state.active.kind) === "meal" ? normalizeMealSlot(state.active.mealSlot) : "",
+          subject: normalizeKind(state.active.kind) === "study" ? normalizeSubject(state.active.subject) : "",
+          startIso: state.active.startIso,
+          endIso,
+          startMs: state.active.startMs,
+          endMs,
+          grossMs,
+          studyMs,
+          primaryStudyMs,
+          vocabularyMs,
+          breakMs,
+          durationMs: studyMs,
+          pauses,
+          vocabularySessions,
+          distractions: normalizeDistractions(state.active.distractions),
+          actualOutput: "",
+          selfEvaluation: ""
+        };
+        const key = dateKey(new Date(entry.startIso));
+        state.selectedDateKey = key;
+        if (options.countdownComplete) {
+          countdownCompletionDisplayUntil = Date.now() + 5000;
+        }
+        state.active = null;
+        if (normalizeKind(entry.kind) === "study") {
+          state.pendingCompletion = {
+            entry,
+            countdownComplete: Boolean(options.countdownComplete),
+            createdAtIso: new Date().toISOString()
+          };
+        } else {
+          state.entriesByDate[key] = state.entriesByDate[key] || [];
+          state.entriesByDate[key].push(entry);
+        }
+        if (!saveState()) {
+          renderAll();
+          return;
+        }
+        renderAll();
+        if (options.countdownComplete) {
+          playCountdownAlarm();
+          setToast(normalizeKind(entry.kind) === "study" ? "倒计时结束，请填写本段复盘" : "倒计时结束，已保存本段记录");
+        } else if (normalizeKind(entry.kind) === "study") {
+          setToast("请填写本段实际产出和执行评价");
+        }
+      }
+
+      function saveBlockReview() {
+        if (!timerWriteActive) { void runTimerMutation(() => saveBlockReview()); return; }
+        if (!state.pendingCompletion) {
+          renderBlockReview();
+          return;
+        }
+        const actualOutput = normalizeActualOutput(blockReviewOutput.value);
+        if (!actualOutput) {
+          blockReviewError.textContent = "请填写一句实际产出";
+          blockReviewOutput.focus();
+          return;
+        }
+        const selfEvaluation = normalizeSelfEvaluation(selectedSelfEvaluation);
+        if (!selfEvaluation) {
+          blockReviewError.textContent = "请选择本段的执行评价";
+          return;
+        }
+
+        const entry = normalizeEntry({
+          ...state.pendingCompletion.entry,
+          actualOutput,
+          selfEvaluation
+        });
+        const key = dateKey(new Date(entry.startIso));
+        const existing = state.entriesByDate[key] || [];
+        const existingIndex = existing.findIndex((candidate) => candidate.id === entry.id);
+        if (existingIndex >= 0) {
+          existing[existingIndex] = entry;
+        } else {
+          existing.push(entry);
+        }
+        state.entriesByDate[key] = existing;
+        state.selectedDateKey = key;
+        state.pendingCompletion = null;
+        if (!saveState()) {
+          renderAll();
+          return;
+        }
+        reviewingEntryId = null;
+        selectedSelfEvaluation = "";
+        blockReviewOutput.value = "";
+        blockReviewError.textContent = "";
+        renderAll();
+        setToast("已保存本段产出和执行评价");
+      }
+
+      function findEntry(id) {
+        const entries = currentEntries();
+        return entries.find((entry) => entry.id === id);
+      }
+
+      function deleteEntry(id) {
+        if (!timerWriteActive) { void runTimerMutation(() => deleteEntry(id)); return; }
+        if (!window.confirm("确认删除这条记录？")) {
+          return;
+        }
+        const key = selectedDateKey();
+        state.entriesByDate[key] = currentEntries().filter((entry) => entry.id !== id);
+        saveState();
+        renderAll();
+      }
+
+      function openEdit(id) {
+        const entry = findEntry(id);
+        if (!entry) {
+          setToast("没有找到这条记录", true);
+          return;
+        }
+        editingId = id;
+        editTask.value = entry.task || "";
+        editKind.value = normalizeKind(entry.kind);
+        editMealSlot.value = normalizeMealSlot(entry.mealSlot);
+        editSubject.value = normalizeSubject(entry.subject);
+        editStart.value = shortTimeText(new Date(entry.startIso));
+        editEnd.value = shortTimeText(new Date(entry.endIso));
+        editPauses.value = Array.isArray(entry.pauses) && entry.pauses.length
+          ? entry.pauses.map((pause) => shortTimeText(new Date(pause.startIso)) + "-" + shortTimeText(new Date(pause.endIso)) + " " + pause.reason).join("\n")
+          : "";
+        editVocabulary.value = normalizeVocabularySessions(entry.vocabularySessions).length
+          ? normalizeVocabularySessions(entry.vocabularySessions)
+              .map((session) => shortTimeText(new Date(session.startIso)) + "-" + shortTimeText(new Date(session.endIso)))
+              .join("\n")
+          : "";
+        editOutput.value = normalizeActualOutput(entry.actualOutput);
+        editEvaluation.value = normalizeSelfEvaluation(entry.selfEvaluation);
+        editMealSlot.disabled = normalizeKind(editKind.value) !== "meal";
+        updateEditReviewFields();
+        editModal.hidden = false;
+      }
+
+      function updateEditReviewFields() {
+        const isStudy = normalizeKind(editKind.value) === "study";
+        editOutputField.hidden = !isStudy;
+        editEvaluationField.hidden = !isStudy;
+        editVocabularyField.hidden = !isStudy;
+        editSubjectField.hidden = !isStudy;
+        editSubject.disabled = !isStudy;
+        editOutput.disabled = !isStudy;
+        editEvaluation.disabled = !isStudy;
+        editVocabulary.disabled = !isStudy;
+      }
+
+      function closeEdit() {
+        editingId = null;
+        editModal.hidden = true;
+      }
+
+      function dateWithTime(baseDate, value) {
+        const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || "").trim());
+        if (!match) {
+          return null;
+        }
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+        if (hour > 23 || minute > 59) {
+          return null;
+        }
+        return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hour, minute, 0, 0);
+      }
+
+      function parsePauseLines(text, baseDate, startMs, endMs) {
+        const lines = String(text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+        const pauses = [];
+        for (const line of lines) {
+          const match = /^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})\s+(.+)$/.exec(line);
+          if (!match) {
+            throw new Error("暂停明细格式错误：" + line);
+          }
+          const start = dateWithTime(baseDate, match[1]);
+          const end = dateWithTime(baseDate, match[2]);
+          const reason = safeTask(match[3]);
+          if (!start || !end || end.getTime() <= start.getTime()) {
+            throw new Error("暂停时间不成立：" + line);
+          }
+          if (start.getTime() < startMs || end.getTime() > endMs) {
+            throw new Error("暂停时间必须在学习时间段内：" + line);
+          }
+          pauses.push({
+            reason,
+            startIso: start.toISOString(),
+            endIso: end.toISOString(),
+            startMs: start.getTime(),
+            endMs: end.getTime(),
+            durationMs: end.getTime() - start.getTime()
+          });
+        }
+        return pauses;
+      }
+
+      function parseVocabularyLines(text, baseDate, startMs, endMs) {
+        const lines = String(text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+        const sessions = [];
+        for (const line of lines) {
+          const match = /^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})(?:\s+背单词)?$/.exec(line);
+          if (!match) {
+            throw new Error("背词插曲格式错误：" + line);
+          }
+          const start = dateWithTime(baseDate, match[1]);
+          const end = dateWithTime(baseDate, match[2]);
+          if (!start || !end || end.getTime() <= start.getTime()) {
+            throw new Error("背词时间不成立：" + line);
+          }
+          if (start.getTime() < startMs || end.getTime() > endMs) {
+            throw new Error("背词时间必须在学习时间段内：" + line);
+          }
+          sessions.push({
+            startIso: start.toISOString(),
+            endIso: end.toISOString(),
+            startMs: start.getTime(),
+            endMs: end.getTime(),
+            durationMs: end.getTime() - start.getTime()
+          });
+        }
+        return normalizeVocabularySessions(sessions);
+      }
+
+      function intervalsOverlap(left, right) {
+        return left.startMs < right.endMs && right.startMs < left.endMs;
+      }
+
+      function validateIntervals(pauses, vocabularySessions) {
+        const sortedPauses = pauses.slice().sort((left, right) => left.startMs - right.startMs);
+        const sortedVocabulary = vocabularySessions.slice().sort((left, right) => left.startMs - right.startMs);
+        for (let index = 1; index < sortedPauses.length; index += 1) {
+          if (intervalsOverlap(sortedPauses[index - 1], sortedPauses[index])) {
+            throw new Error("暂停明细之间不能重叠");
+          }
+        }
+        for (let index = 1; index < sortedVocabulary.length; index += 1) {
+          if (intervalsOverlap(sortedVocabulary[index - 1], sortedVocabulary[index])) {
+            throw new Error("背词插曲之间不能重叠");
+          }
+        }
+        for (const pause of sortedPauses) {
+          if (sortedVocabulary.some((session) => intervalsOverlap(pause, session))) {
+            throw new Error("背词时间不能和暂停休息重叠");
+          }
+        }
+      }
+
+      function saveEdit() {
+        if (!timerWriteActive) { void runTimerMutation(() => saveEdit()); return; }
+        const entry = findEntry(editingId);
+        if (!entry) {
+          closeEdit();
+          return;
+        }
+        const baseDate = new Date(entry.startIso);
+        const start = dateWithTime(baseDate, editStart.value);
+        const end = dateWithTime(baseDate, editEnd.value);
+        if (!start || !end || end.getTime() <= start.getTime()) {
+          setToast("开始/结束时间不成立", true);
+          return;
+        }
+        const kind = normalizeKind(editKind.value);
+        let pauses;
+        let vocabularySessions;
+        try {
+          pauses = parsePauseLines(editPauses.value, baseDate, start.getTime(), end.getTime());
+          vocabularySessions = kind === "study"
+            ? parseVocabularyLines(editVocabulary.value, baseDate, start.getTime(), end.getTime())
+            : [];
+          validateIntervals(pauses, vocabularySessions);
+        } catch (error) {
+          setToast(error.message, true);
+          return;
+        }
+        const breakMs = pauses.reduce((sum, pause) => sum + pause.durationMs, 0);
+        const vocabularyMs = vocabularySessions.reduce((sum, session) => sum + session.durationMs, 0);
+        const grossMs = end.getTime() - start.getTime();
+        const studyMs = Math.max(0, grossMs - breakMs);
+        const primaryStudyMs = Math.max(0, studyMs - vocabularyMs);
+        entry.task = safeTask(editTask.value);
+        entry.kind = kind;
+        entry.mealSlot = kind === "meal" ? normalizeMealSlot(editMealSlot.value) : "";
+        entry.subject = kind === "study" ? normalizeSubject(editSubject.value) : "";
+        entry.startIso = start.toISOString();
+        entry.endIso = end.toISOString();
+        entry.startMs = start.getTime();
+        entry.endMs = end.getTime();
+        entry.grossMs = grossMs;
+        entry.breakMs = breakMs;
+        entry.studyMs = studyMs;
+        entry.primaryStudyMs = primaryStudyMs;
+        entry.vocabularyMs = vocabularyMs;
+        entry.durationMs = studyMs;
+        entry.pauses = pauses;
+        entry.vocabularySessions = vocabularySessions;
+        entry.actualOutput = kind === "study" ? normalizeActualOutput(editOutput.value) : "";
+        entry.selfEvaluation = kind === "study" ? normalizeSelfEvaluation(editEvaluation.value) : "";
+        delete entry.pauseReason;
+        saveState();
+        closeEdit();
+        renderAll();
+        setToast("已保存修改");
+      }
+
+      function buildMarkdown() {
+        const key = selectedDateKey();
+        const entries = currentEntries();
+        const studyEntries = entries.filter((entry) => normalizeKind(entry.kind) !== "meal");
+        const mealEntries = entries.filter((entry) => normalizeKind(entry.kind) === "meal");
+        const maintenanceItems = maintenanceItemsForDate(key);
+        const totalStudyMs = studyEntries.reduce((sum, entry) => sum + entryStudyMs(entry), 0);
+        const totalVocabularyMs = studyEntries.reduce((sum, entry) => sum + entryVocabularyMs(entry), 0);
+        const totalBreakMs = studyEntries.reduce((sum, entry) => sum + entryBreakMs(entry), 0);
+        const totalDistractions = studyEntries.reduce((sum, entry) => sum + distractionCount(entry), 0);
+        const totalMealMs = mealEntries.reduce((sum, entry) => sum + entryGrossMs(entry), 0);
+        const lines = [
+          "## " + key + " 计时记录",
+          "",
+          "### 吃饭",
+          "",
+          "| 餐次 | 时间段 | 用时 | 备注 |",
+          "| --- | --- | ---: | --- |"
+        ];
+
+        for (const slot of MEAL_SLOTS) {
+          const slotEntries = mealEntries
+            .filter((entry) => normalizeMealSlot(entry.mealSlot) === slot)
+            .sort((a, b) => a.startMs - b.startMs);
+          if (!slotEntries.length) {
+            lines.push("| " + MEAL_SLOT_LABELS[slot] + " | 未记录 |  |  |");
+            continue;
+          }
+          for (const entry of slotEntries) {
+            const task = String(entry.task || "").replaceAll("|", "\\|");
+            lines.push("| " + MEAL_SLOT_LABELS[slot] + " | " + timeRangeText(entry) + " | " + formatDuration(entryGrossMs(entry)) + " | " + task + " |");
+          }
+        }
+
+        lines.push("| 合计 |  | " + formatDuration(totalMealMs) + " |  |");
+        lines.push(
+          "",
+          "### 学习",
+          "",
+          "| 时间段 | 科目 | 总窗口 | 净学习 | 背词插曲 | 休息 | 任务 | 实际产出 | 执行自评 | 分心记录 | 暂停明细 |",
+          "| --- | --- | ---: | ---: | --- | ---: | --- | --- | --- | --- | --- |"
+        );
+
+        for (const entry of studyEntries) {
+          const task = String(entry.task || "未标注任务").replaceAll("|", "\\|");
+          const actualOutput = String(entry.actualOutput || "未填写").replaceAll("|", "\\|");
+          const selfEvaluation = selfEvaluationLabel(entry.selfEvaluation);
+          const distractions = distractionSummary(entry).replaceAll("|", "\\|");
+          const vocabulary = vocabularySummary(entry).replaceAll("|", "\\|");
+          const pauses = pauseSummary(entry).replaceAll("|", "\\|");
+          lines.push("| " + timeRangeText(entry) + " | " + entrySubjectSummary(entry) + " | " + formatDuration(entryGrossMs(entry)) + " | " + formatDuration(entryStudyMs(entry)) + " | " + vocabulary + " | " + formatDuration(entryBreakMs(entry)) + " | " + task + " | " + actualOutput + " | " + selfEvaluation + " | " + distractions + " | " + pauses + " |");
+        }
+
+        lines.push("| 合计 |  |  | " + formatDuration(totalStudyMs) + " | " + formatDuration(totalVocabularyMs) + " | " + formatDuration(totalBreakMs) + " |  |  |  | " + totalDistractions + " 次 |  |");
+
+        const subjectTotals = subjectTotalsByEntry(studyEntries);
+        lines.push("", "### 三科时间", "");
+        for (const subject of SUBJECTS) {
+          lines.push("- " + SUBJECT_LABELS[subject] + "：" + formatDuration(subjectTotals.totals.get(subject) || 0));
+        }
+        if (subjectTotals.uncategorizedMs) {
+          lines.push("- 未分类：" + formatDuration(subjectTotals.uncategorizedMs));
+        }
+
+        lines.push("", "### 稍后维护", "");
+        if (!maintenanceItems.length) {
+          lines.push("- 无");
+        } else {
+          for (const item of maintenanceItems) {
+            const title = item.title.replaceAll("\n", " ");
+            const task = item.task.replaceAll("\n", " ");
+            const note = item.note ? "｜" + item.note.replaceAll("\n", " ") : "";
+            lines.push("- " + timeText(new Date(item.createdAt)) + "｜" + task + "｜" + title + note);
+          }
+        }
+
+        if (state.active && dateKey(new Date(state.active.startIso)) === key) {
+          lines.push("");
+          const start = new Date(state.active.startIso);
+          let status = "仍在计时";
+          if (state.active.pendingPauseChoice) {
+            status = "已暂停，待选择原因";
+          } else if (state.active.currentPause) {
+            status = "暂停中：" + state.active.currentPause.reason;
+          } else if (state.active.currentVocabulary) {
+            status = "背单词中，原任务已暂停";
+          }
+          const activeDistractions = distractionCount(state.active);
+          const distractionStatus = normalizeKind(state.active.kind) === "study" ? "，已记录分心 " + activeDistractions + " 次" : "";
+          lines.push("> 当前" + status + "：" + shortTimeText(start) + " 开始，" + entryLabel(state.active) + "：" + state.active.task.replaceAll("|", "\\|") + distractionStatus);
+        }
+
+        return lines.join("\n");
+      }
+
+      function buildCloseoutProjection() {
+        const key = selectedDateKey();
+        const entries = currentEntries();
+        const studyEntries = entries
+          .filter((entry) => normalizeKind(entry.kind) !== "meal")
+          .slice()
+          .sort((left, right) => left.startMs - right.startMs);
+        const mealEntries = entries.filter((entry) => normalizeKind(entry.kind) === "meal");
+        const subjectTotals = subjectTotalsByEntry(studyEntries);
+        return {
+          schema: "left_screen_daily_closeout_v1",
+          date: key,
+          generated_at: new Date().toISOString(),
+          summary: {
+            completed_blocks: studyEntries.length,
+            gross_ms: studyEntries.reduce((sum, entry) => sum + entryGrossMs(entry), 0),
+            study_ms: studyEntries.reduce((sum, entry) => sum + entryStudyMs(entry), 0),
+            vocabulary_ms: studyEntries.reduce((sum, entry) => sum + entryVocabularyMs(entry), 0),
+            break_ms: studyEntries.reduce((sum, entry) => sum + entryBreakMs(entry), 0),
+            distraction_count: studyEntries.reduce((sum, entry) => sum + distractionCount(entry), 0),
+            meal_ms: mealEntries.reduce((sum, entry) => sum + entryGrossMs(entry), 0),
+            subject_study_ms: Object.fromEntries(
+              SUBJECTS.map((subject) => [subject, subjectTotals.totals.get(subject) || 0])
+            ),
+            uncategorized_study_ms: subjectTotals.uncategorizedMs
+          },
+          study_blocks: studyEntries.map((entry) => ({
+            block_id: String(entry.blockId || ""),
+            task: safeTask(entry.task),
+            subject: normalizeSubject(entry.subject),
+            started_at: String(entry.startIso || ""),
+            ended_at: String(entry.endIso || ""),
+            gross_ms: entryGrossMs(entry),
+            study_ms: entryStudyMs(entry),
+            primary_study_ms: entryPrimaryStudyMs(entry),
+            vocabulary_ms: entryVocabularyMs(entry),
+            vocabulary_sessions: normalizeVocabularySessions(entry.vocabularySessions).map((session) => ({
+              started_at: session.startIso,
+              ended_at: session.endIso,
+              duration_ms: session.durationMs
+            })),
+            break_ms: entryBreakMs(entry),
+            distraction_count: distractionCount(entry),
+            actual_output: normalizeActualOutput(entry.actualOutput),
+            self_evaluation: normalizeSelfEvaluation(entry.selfEvaluation)
+          })),
+          maintenance_inbox: maintenanceItemsForDate(key).map((item) => ({
+            created_at: item.createdAt,
+            task: item.task,
+            title: item.title,
+            note: item.note
+          }))
+        };
+      }
+
+      async function copyText(text, successMessage) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          setToast(successMessage);
+          return;
+        }
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setToast(successMessage);
+      }
+
+      async function copyMarkdown() {
+        const markdown = buildMarkdown();
+        try {
+          await copyText(markdown, "已复制 Markdown");
+        } catch (error) {
+          setToast("复制失败", true);
+        }
+      }
+
+      async function copyCloseoutJson() {
+        try {
+          await copyText(JSON.stringify(buildCloseoutProjection(), null, 2), "已复制 JSON");
+        } catch (error) {
+          setToast("复制失败", true);
+        }
+      }
+
+      function ensureRuntimeLoops() {
+        if (tickId === null) {
+          tickId = window.setInterval(renderLive, 1000);
+        }
+        if (globalShortcutPollId === null) {
+          globalShortcutPollId = window.setInterval(pollGlobalShortcutSignal, 500);
+        }
+        if (writerLeaseIntervalId === null) {
+          writerLeaseIntervalId = window.setInterval(
+            renewOrAcquireWriterLease,
+            WRITER_LEASE_RENEW_MS
+          );
+        }
+      }
+
+      function stopRuntimeLoops() {
+        window.clearInterval(tickId);
+        tickId = null;
+        window.clearInterval(globalShortcutPollId);
+        globalShortcutPollId = null;
+        window.clearInterval(writerLeaseIntervalId);
+        writerLeaseIntervalId = null;
+        resetGlobalShortcutLoad();
+      }
+
+      function resumeRuntime() {
+        const pairedToken = (localStorage.getItem(CONTROL_TOKEN_KEY) || sessionStorage.getItem(CONTROL_TOKEN_KEY));
+        if (pairedToken && controlTransport && !controlTransport.isEnabled() && atomicTimerWritesAvailable()) controlTransport.start(pairedToken);
+        guardianPageHideSent = false;
+        state = loadState();
+        maintenanceInbox = loadMaintenanceInbox();
+        renewOrAcquireWriterLease();
+        ensureRuntimeLoops();
+        renderAll();
+        if (writerLeaseOwned) {
+          pollGlobalShortcutSignal();
+          scheduleGuardianMirror(0);
+        }
+      }
+
+      taskInput.value = normalizeKind(state.lastKind) === "meal" ? state.lastMealTask || "" : state.lastStudyTask || state.lastTask || "";
+      mealSlotInput.value = normalizeMealSlot(state.lastMealSlot);
+      viewDateInput.value = selectedDateKey();
+      startBtn.addEventListener("click", startSession);
+      pauseBtn.addEventListener("click", pauseSession);
+      vocabularyBtn.addEventListener("click", toggleVocabularyInterlude);
+      countUpModeBtn.addEventListener("click", () => setTimerMode("countup"));
+      countDownModeBtn.addEventListener("click", () => setTimerMode("countdown"));
+      countdownMinutesInput.addEventListener("input", updateCountdownMinutes);
+      countdownMinutesInput.addEventListener("blur", normalizeCountdownInput);
+      countdownMinutesInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !state.active && !state.pendingCompletion) {
+          event.preventDefault();
+          startSession();
+        }
+      });
+      distractionBtn.addEventListener("click", () => recordDistraction());
+      window.addEventListener("keydown", handleDistractionShortcut, true);
+      window.addEventListener("keyup", releaseDistractionShortcut, true);
+      window.addEventListener("blur", () => {
+        rightOptionDown = false;
+      });
+      endBtn.addEventListener("click", () => {
+        if (!completeCountdownIfNeeded()) {
+          endSession();
+        }
+      });
+      editActiveTaskBtn.addEventListener("click", () => openActiveEditor("task"));
+      editPauseReasonBtn.addEventListener("click", () => openActiveEditor("pause"));
+      deferMaintenanceBtn.addEventListener("click", openMaintenanceModal);
+      activeEditCancel.addEventListener("click", closeActiveEditor);
+      activeEditSave.addEventListener("click", saveActiveEditor);
+      activeEditInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveActiveEditor();
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeActiveEditor();
+        }
+      });
+      activeEditInput.addEventListener("input", () => {
+        activeEditError.textContent = "";
+      });
+      activeEditModal.addEventListener("click", (event) => {
+        if (event.target === activeEditModal) {
+          closeActiveEditor();
+        }
+      });
+      blockReviewEvaluation.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-evaluation]");
+        if (!button || button.disabled || !state.pendingCompletion) {
+          return;
+        }
+        selectedSelfEvaluation = normalizeSelfEvaluation(button.dataset.evaluation);
+        blockReviewError.textContent = "";
+        updateReviewEvaluationButtons();
+      });
+      blockReviewOutput.addEventListener("input", () => {
+        blockReviewError.textContent = "";
+      });
+      blockReviewOutput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveBlockReview();
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+        }
+      });
+      blockReviewSave.addEventListener("click", saveBlockReview);
+      blockReviewModal.addEventListener("click", (event) => {
+        if (event.target === blockReviewModal) {
+          blockReviewOutput.focus();
+        }
+      });
+      maintenanceCancel.addEventListener("click", closeMaintenanceModal);
+      maintenanceSave.addEventListener("click", saveMaintenanceItem);
+      maintenanceTitleInput.addEventListener("input", () => {
+        maintenanceError.textContent = "";
+      });
+      maintenanceTitleInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveMaintenanceItem();
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeMaintenanceModal();
+        }
+      });
+      maintenanceNoteInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveMaintenanceItem();
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeMaintenanceModal();
+        }
+      });
+      maintenanceModal.addEventListener("click", (event) => {
+        if (event.target === maintenanceModal) {
+          closeMaintenanceModal();
+        }
+      });
+      studyKindBtn.addEventListener("click", () => setEntryKind("study"));
+      mealKindBtn.addEventListener("click", () => setEntryKind("meal"));
+      subjectButtons.forEach((button) => {
+        button.addEventListener("click", () => setEntrySubject(button.dataset.subject));
+      });
+      mealSlotInput.addEventListener("change", () => setMealSlot(mealSlotInput.value));
+      viewDateInput.addEventListener("change", () => setSelectedDateKey(viewDateInput.value));
+      prevDateBtn.addEventListener("click", () => setSelectedDateKey(addDays(selectedDateKey(), -1)));
+      todayBtn.addEventListener("click", () => setSelectedDateKey(dateKey(now())));
+      nextDateBtn.addEventListener("click", () => setSelectedDateKey(addDays(selectedDateKey(), 1)));
+      pauseReasonPanel.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-reason]");
+        if (!button) {
+          return;
+        }
+        choosePauseReason(button.dataset.reason);
+      });
+      customPauseReasonBtn.addEventListener("click", submitCustomPauseReason);
+      customPauseReasonInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          submitCustomPauseReason();
+        }
+      });
+      recordsContainer.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-action]");
+        if (!button) {
+          return;
+        }
+        const id = button.dataset.id;
+        if (button.dataset.action === "maintenance-remove") {
+          removeMaintenanceItem(id);
+          return;
+        }
+        if (button.dataset.action === "edit") {
+          openEdit(id);
+        }
+        if (button.dataset.action === "delete") {
+          deleteEntry(id);
+        }
+      });
+      editCancel.addEventListener("click", closeEdit);
+      editSave.addEventListener("click", saveEdit);
+      editKind.addEventListener("change", () => {
+        editMealSlot.disabled = normalizeKind(editKind.value) !== "meal";
+        updateEditReviewFields();
+      });
+      editModal.addEventListener("click", (event) => {
+        if (event.target === editModal) {
+          closeEdit();
+        }
+      });
+      copyBtn.addEventListener("click", copyMarkdown);
+      copyJsonBtn.addEventListener("click", copyCloseoutJson);
+      function saveTaskDraft() {
+        if (!timerWriteActive) { void runTimerMutation(saveTaskDraft); return; }
+        if (!state.active && !state.pendingCompletion) {
+          state.lastTask = taskInput.value;
+          if (normalizeKind(state.lastKind) === "meal") {
+            state.lastMealTask = taskInput.value;
+          } else {
+            state.lastStudyTask = taskInput.value;
+          }
+          saveState();
+          renderTimer();
+        }
+      }
+      taskInput.addEventListener("input", saveTaskDraft);
+
+      const controlApi = window.StudyTimerControl;
+      let timerController = null;
+      const remoteStatus = document.getElementById("remoteControlStatus");
+      const remotePair = document.getElementById("remoteControlPair");
+      const remoteToken = document.getElementById("remoteControlToken");
+      const remoteStop = document.getElementById("remoteControlStopBtn");
+      if (controlApi) {
+        timerController = controlApi.createController({
+          snapshot: () => controlApi.snapshot(state, taskInput.value, currentTabOwnsWriterLease()),
+          supportsAtomicWrites: atomicTimerWritesAvailable,
+          runMutation: runTimerMutation,
+          getReceipts: () => state.controlReceipts || [],
+          addReceipt: (receipt, limit) => { state.controlReceipts = [...(state.controlReceipts || []), receipt].slice(-limit); saveState(); },
+          perform: (action, options) => {
+            if (action === "start" || action === "resume") startSession({ allowMissingSubject: true });
+            else if (action === "pause") { pauseSession(); choosePauseReason(options.reason); }
+            else if (action === "distraction") {
+              const outcome = recordDistraction(undefined, options);
+              if (!["recorded", "already_recorded"].includes(outcome)) return { ok: false, error: outcome };
+            } else if (action === "stop") endSession();
+            else return { ok: false, error: "unknown_action" };
+            return { ok: true };
+          }
+        });
+        controlTransport = controlApi.createTransport({
+          controller: timerController, instanceId: writerTabId, fetch: (...args) => fetch(...args),
+          onConnection: (status) => {
+            const labels = { connected: "遥控已连接", disconnected: "遥控未同步", disabled: "遥控未启用", not_writer: "遥控等待原计时页" };
+            remoteStatus.textContent = labels[status] || "遥控未同步";
+            remoteStop.hidden = status === "disabled";
+          }
+        });
+      }
+      document.getElementById("remoteControlPairBtn").addEventListener("click", () => {
+        remotePair.hidden = false; remoteToken.focus();
+      });
+      document.getElementById("remoteControlCancelBtn").addEventListener("click", () => {
+        remoteToken.value = ""; remotePair.hidden = true;
+      });
+      document.getElementById("remoteControlConnectBtn").addEventListener("click", () => {
+        if (!controlTransport || !atomicTimerWritesAvailable()) { remoteStatus.textContent = "当前页面不支持安全遥控写入"; return; }
+        const token = remoteToken.value.trim();
+        if (!controlTransport.start(token)) { remoteStatus.textContent = "配对密钥无效"; return; }
+        localStorage.setItem(CONTROL_TOKEN_KEY, token);
+        sessionStorage.setItem(CONTROL_TOKEN_KEY, token);
+        remoteToken.value = ""; remotePair.hidden = true;
+      });
+      remoteStop.addEventListener("click", () => {
+        if (controlTransport) controlTransport.stop();
+        sessionStorage.removeItem(CONTROL_TOKEN_KEY);
+        localStorage.removeItem(CONTROL_TOKEN_KEY);
+      });
+
+      renewOrAcquireWriterLease();
+      ensureRuntimeLoops();
+      renderAll();
+      if (writerLeaseOwned) {
+        scheduleGuardianMirror(0);
+        pollGlobalShortcutSignal();
+      }
+      if (typeof window.__studyTimerTestHook === "function") {
+        window.__studyTimerTestHook({ controller: timerController, runMutation: runTimerMutation,
+          getState: () => state, startSession, pauseSession, choosePauseReason, recordDistraction,
+          endSession, saveBlockReview, receiveGlobalDistractionEvents, saveTaskDraft });
+      }
+      const savedControlToken = (localStorage.getItem(CONTROL_TOKEN_KEY) || sessionStorage.getItem(CONTROL_TOKEN_KEY));
+      if (savedControlToken && controlTransport && atomicTimerWritesAvailable()) controlTransport.start(savedControlToken);
+      const suspendRuntime = () => {
+        if (controlTransport) controlTransport.stop();
+        sendGuardianPagehideSnapshot();
+        stopRuntimeLoops();
+        window.clearTimeout(guardianMirrorTimeoutId);
+        guardianMirrorTimeoutId = null;
+        releaseWriterLease();
+      };
+      window.addEventListener("beforeunload", () => {
+        suspendRuntime();
+        if (alarmAudioContext) {
+          alarmAudioContext.close().catch(() => {});
+        }
+      });
+      window.addEventListener("pagehide", suspendRuntime);
+      window.addEventListener("pageshow", resumeRuntime);
+      window.addEventListener("focus", resumeRuntime);
+      window.addEventListener("online", resumeRuntime);
+      window.addEventListener("resume", resumeRuntime);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          resumeRuntime();
+        }
+      });
+      document.addEventListener("freeze", suspendRuntime);
+      document.addEventListener("resume", resumeRuntime);
+      window.addEventListener("storage", (event) => {
+        if (event.key === GUARDIAN_SYNC_KEY) {
+          guardianSync = loadGuardianSync();
+          updateGuardianSyncStatus();
+          return;
+        }
+        if (event.key === WRITER_LEASE_KEY) {
+          const wasWriter = writerLeaseOwned;
+          writerLeaseOwned = currentTabOwnsWriterLease();
+          if (!writerLeaseOwned && wasWriter) {
+            state = loadState();
+            resetGlobalShortcutLoad();
+          }
+          if (writerLeaseOwned !== wasWriter) {
+            renderAll();
+          } else {
+            updateGuardianSyncStatus();
+          }
+          return;
+        }
+        if (event.key === MAINTENANCE_INBOX_KEY) {
+          maintenanceInbox = loadMaintenanceInbox();
+          renderRecords();
+          return;
+        }
+        if (event.key !== STORAGE_KEY || !event.newValue) {
+          return;
+        }
+        const previousRevision = Number(state.guardianRevision || 0);
+        state = loadState();
+        renderAll();
+        if (writerLeaseOwned && Number(state.guardianRevision || 0) !== previousRevision) {
+          scheduleGuardianMirror(0);
+        }
+      });
+    }());
+  </script>
+</body>
+</html>
